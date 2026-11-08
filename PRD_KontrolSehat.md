@@ -2,7 +2,7 @@
 
 *Aplikasi Mobile Pengingat Jadwal Kontrol dan Konsumsi Obat bagi Pasien Hipertensi*
 
-Project Individu · Teori Sistem Informasi Layanan Kesehatan (IF2371054) · Penyusun: Mohammad Iqbal Maulana · Versi 2.2 (diselaraskan dengan SQL dan ketentuan tugas) · 8 November 2026
+Project Individu · Teori Sistem Informasi Layanan Kesehatan (IF2371054) · Penyusun: Mohammad Iqbal Maulana · Versi 2.2.1 (diselaraskan dengan SQL dan ketentuan tugas) · 8 November 2026
 
 ## 1. Ringkasan Produk
 
@@ -48,7 +48,7 @@ Aplikasi tidak mengubah proses klinis di fasilitas kesehatan. Ia mendukung peman
 | G1 | Pengingat obat tepat waktu | Notifikasi muncul paling lambat 1 menit dari jam jadwal pada 10 dari 10 percobaan | Uji manual di perangkat fisik |
 | G2 | Pencatatan cepat | Menandai dosis maksimal 2 ketukan dari Beranda; mencatat tekanan darah maksimal 30 detik | Stopwatch pada 5 responden |
 | G3 | Kepatuhan dihitung benar | Hasil aplikasi sama dengan hitungan manual pada data seed (selisih 0 poin persen) | Bandingkan dengan tabel hitung manual |
-| G4 | Label tekanan darah benar | 100 persen benar pada 20 kasus uji (termasuk semua nilai batas) | Tabel kasus uji |
+| G4 | Label tekanan darah benar | 100 persen benar pada minimal 22 kasus uji (termasuk semua nilai batas), sama dengan kasus di `03_verifikasi.sql` | Tabel kasus uji |
 | G5 | Privasi data | 0 baris milik akun lain terbaca atau berubah pada semua tabel | Uji dua akun, termasuk upaya akses langsung ke API |
 | G6 | Mudah dipakai | Rata-rata skor kuesioner minimal 4,0 dari 5 | Kuesioner 5 responden |
 | G7 | Demo stabil | Alur demo pada bagian 16 selesai tanpa crash 3 kali berturut-turut | Uji berulang |
@@ -103,11 +103,11 @@ Katalog obat diisi pengembang lewat SQL seed, sehingga tidak ada fitur admin di 
 7. **A7.** Ketepatan waktu minum tidak dinilai; dosis dianggap patuh bila dicatat "Sudah minum".
 8. **A8.** Proyek Supabase tetap aktif selama pengujian dan demo.
 
-9) **A9.** Proyek Supabase dibuat dengan opsi "Automatically expose new tables" nonaktif. Semua hak akses diberikan manual lewat `GRANT` di `01_schema.sql`, dan peran `anon` tidak punya hak apa pun.
-10) **A10.** Aturan password (minimal 8 karakter, memuat huruf dan angka) dipasang di aplikasi dan di pengaturan Authentication Supabase (Minimum password length dan Password requirements). Fitur "Prevent use of leaked passwords" tidak dipakai karena khusus paket berbayar.
-11) **A11.** Aplikasi memakai Publishable key (`sb_publishable_...`). Secret key tidak pernah dipakai di aplikasi atau repositori.
-12) **A12.** Zona waktu profil ditetapkan saat registrasi dari perangkat dan tidak berubah otomatis, sehingga batas tanggal dosis tetap konsisten.
-13) **A13.** Aplikasi memanggil `ensure_doses` setiap kali dibuka dan setelah login. Dosis pada hari-hari saat aplikasi tidak dibuka dibuat pada pemanggilan berikutnya dan terhitung terlewat.
+9. **A9.** Proyek Supabase dibuat dengan opsi "Automatically expose new tables" nonaktif. Semua hak akses diberikan manual lewat `GRANT` di `01_schema.sql`, dan peran `anon` tidak punya hak apa pun.
+10. **A10.** Aturan password (minimal 8 karakter, memuat huruf dan angka) dipasang di aplikasi dan di pengaturan Authentication Supabase (Minimum password length dan Password requirements). Fitur "Prevent use of leaked passwords" tidak dipakai karena khusus paket berbayar.
+11. **A11.** Aplikasi memakai Publishable key (`sb_publishable_...`). Secret key tidak pernah dipakai di aplikasi atau repositori.
+12. **A12.** Zona waktu profil ditetapkan saat registrasi dari perangkat dan tidak berubah otomatis, sehingga batas tanggal dosis tetap konsisten.
+13. **A13.** Aplikasi memanggil `ensure_doses` setiap kali dibuka dan setelah login. Dosis pada hari-hari saat aplikasi tidak dibuka dibuat pada pemanggilan berikutnya dan terhitung terlewat.
 
 ## 7. Alur Pengguna
 
@@ -266,7 +266,7 @@ Prioritas: **M** = wajib (Must), **S** = sebaiknya (Should), **C** = bila sempat
 
 | ID | Kebutuhan | Kriteria penerimaan | Prioritas |
 | --- | --- | --- | --- |
-| FR-401 | Sudah minum | Meng`ubah status menjadi taken; taken_at diisi server dengan` waktu sekarang; hanya bisa pada status "Waktunya minum" atau "Terlambat" | M |
+| FR-401 | Sudah minum | Mengubah status menjadi `taken`; `taken_at` diisi server dengan waktu sekarang; hanya bisa pada status "Waktunya minum" atau "Terlambat" | M |
 | FR-402 | Lewati | Mengisi `status = skipped`; aturan waktu sama dengan FR-401 | M |
 | FR-403 | Ubah catatan | Status `taken` dan `skipped` bisa diganti satu sama lain atau dikembalikan ke `pending` sampai pukul 23:59 tanggal dosis; sesudahnya terkunci | S |
 | FR-404 | Dosis terlewat | Dosis `pending` pada tanggal yang sudah lewat tampil "Terlewat" dan dihitung tidak patuh | M |
@@ -491,7 +491,7 @@ Kolom `id`, `user_id`, `created_at`, `schedule_from`, `taken_at`, dan `category`
 
 ### 11.4 Fungsi dan trigger
 
-Semua fungsi `SECURITY DEFINER` memakai `search_path` terkunci dan selalu mengambil identitas dari `auth.uid()`, bukan dari parameter.
+Fungsi yang berjalan dengan hak pemilik (`SECURITY DEFINER`) memakai `search_path` terkunci dan selalu mengambil identitas dari `auth.uid()`, bukan dari parameter. Pengecualian: `adherence_by_day` dan trigger validasi sederhana (`profiles_validate`, `appointments_before_write`, `bp_before_write`) berjalan dengan hak pemanggil.
 
 **Fungsi yang dipanggil aplikasi (RPC, hanya untuk pengguna login):**
 
@@ -542,7 +542,7 @@ Aturan khusus pengguna aplikasi pada trigger tidak berlaku untuk skrip admin ata
 | --- | --- |
 | Obat | 3 obat aktif, 4 dosis per hari: Amlodipine 5 mg (08:00), Captopril 25 mg (08:00 dan 20:00), Hidroklorotiazid 25 mg (07:00) |
 | Riwayat dosis | 28 hari ke belakang; sebelum hari ini sekitar 85 persen `taken`, 8 persen `skipped`, 7 persen `pending` (terlewat); dosis hari ini dibiarkan `pending` untuk demo |
-| Tekanan darah | 22 catatan dalam 28 hari dengan tren turun dari sekitar 152/96 ke sekitar 121/77, mencakup kategori Tinggi, Waspada, dan Normal |
+| Tekanan darah | 22 catatan dalam 28 hari dengan tren turun dari sekitar 152/96 ke sekitar 116/76, mencakup kategori Tinggi, Waspada, dan Normal |
 | Kontrol | 1 selesai (14 hari lalu), 1 akan datang (3 hari lagi), 1 akan datang (30 hari lagi) |
 
 Skrip seed mencetak jumlah dosis jatuh tempo, jumlah diminum, dan persentase kepatuhan; angka itu menjadi acuan uji G3.
@@ -593,7 +593,7 @@ Aplikasi menampilkan pesan berikut apa adanya (bahasa Indonesia) di snackbar ata
 | NFR-01 | Performa | Beranda menampilkan data paling lambat 2 detik pada Wi-Fi atau 4G; skeleton tampil selama menunggu | Stopwatch pada 3 kali percobaan |
 | NFR-02 | Responsif | Berfungsi tanpa overflow pada lebar 360 sampai 1024 dp; kurang dari 600 dp memakai 1 kolom, 600 dp ke atas memakai 2 kolom kartu | Emulator ponsel dan tablet |
 | NFR-03 | Aksesibilitas | Teks isi minimal 16 sp; area sentuh minimal 48 × 48 dp; kontras teks minimal 4,5 : 1; tata letak utuh sampai skala font sistem 130 persen; status tidak hanya dibedakan warna (selalu ada ikon dan teks) | Pemeriksaan manual dan pengaturan font sistem |
-| NFR-04 | Keamanan | Semua lalu lintas HTTPS; RLS aktif di semua tabel; aplikasi hanya memuat kunci `publishable (sb_publishable_...)` | Uji dua akun; periksa kode dan konfigurasi |
+| NFR-04 | Keamanan | Semua lalu lintas HTTPS; RLS aktif di semua tabel; aplikasi hanya memuat kunci publishable (`sb_publishable_...`) | Uji dua akun; periksa kode dan konfigurasi |
 | NFR-05 | Ketahanan | Bila jaringan gagal tampil "Tidak ada koneksi. Coba lagi." dengan tombol Coba lagi; isian form tidak hilang | Matikan jaringan saat menyimpan |
 | NFR-06 | Kompatibilitas | Android 8.0 (API 26) ke atas; diuji di 1 emulator dan 1 perangkat fisik | Uji perangkat |
 | NFR-07 | Ukuran | APK rilis maksimal 60 MB | Cek ukuran berkas |
@@ -672,7 +672,7 @@ Navigasi bawah dengan lima slot: **Beranda · Obat · \[tombol tengah Catat TD\]
 | --- | --- |
 | SEC-01 | Autentikasi memakai Supabase Auth; password tidak pernah disimpan atau dicatat oleh aplikasi |
 | SEC-02 | Otorisasi memakai RLS sesuai bagian 11.3; hasilnya wajib lolos uji G5 |
-| SEC-03 | Aplikasi hanya memuat kunci `publishable (sb_publishable_...). Kunci secret (sb_secret_...) dan` `service_role` tidak ada di aplikasi maupun repositori. Kunci konfigurasi tidak di-commit (dimasukkan lewat `--dart-define` atau berkas yang diabaikan git) |
+| SEC-03 | Aplikasi hanya memuat kunci publishable (`sb_publishable_...`). Kunci secret (`sb_secret_...`) dan `service_role` tidak ada di aplikasi maupun repositori. Kunci konfigurasi tidak di-commit (dimasukkan lewat `--dart-define` atau berkas yang diabaikan git) |
 | SEC-04 | Seluruh komunikasi dengan backend memakai HTTPS |
 | SEC-05 | Data minimal: tidak mengumpulkan lokasi, kontak, NIK, atau nomor BPJS |
 | SEC-06 | Pengguna dapat mengubah dan menghapus data serta seluruh akunnya (FR-801, FR-804) |
@@ -722,11 +722,9 @@ Aplikasi tidak mengumpulkan lokasi, kontak, NIK, atau nomor BPJS.
 - [ ] APK rilis terpasang dan berjalan di perangkat fisik.
 - [ ] Skrip seed berjalan dan menghasilkan akun demo.
 - [ ] Alur demo di bawah selesai 3 kali berturut-turut tanpa crash.
-
-* [ ] `01_schema.sql` berjalan tanpa error di proyek Supabase.
-* [ ] `03_verifikasi.sql` lulus: RLS aktif di 7 tabel, hasil pemeriksaan hak `anon` kosong, 22 kasus klasifikasi benar.
-* [ ] `02_seed_demo.sql` berjalan dan angka kepatuhan yang dicetaknya dicatat untuk uji G3.
-
+- [ ] `01_schema.sql` berjalan tanpa error di proyek Supabase.
+- [ ] `03_verifikasi.sql` lulus: RLS aktif di 7 tabel, hasil pemeriksaan hak `anon` kosong, 22 kasus klasifikasi benar.
+- [ ] `02_seed_demo.sql` berjalan dan angka kepatuhan yang dicetaknya dicatat untuk uji G3.
 - [ ] Repositori Git berisi kode aplikasi, berkas SQL, dan README (cara menjalankan, tanpa kunci rahasia) dan tautannya siap dikumpulkan.
 
 **Alur demo (sekitar 3 menit):**
@@ -781,3 +779,4 @@ Bagian ini bukan bagian dari versi ini. Ia mencatat apa yang sengaja ditunda dan
 | 2.0 | PRD murni: aturan bisnis, kebutuhan, validasi, data, UI/UX, keamanan |
 | 2.1 | Diselaraskan dengan berkas SQL: hak akses per kolom, `schedule_from`, fungsi dan trigger yang sebenarnya, pemetaan operasi aplikasi ke database, pesan kesalahan, penyusulan dosis (FR-207), kunci publishable, akun demo lewat registrasi, bagian pengembangan lanjutan |
 | 2.2 | Menegaskan satu peran (pasien) dan menghapus peran tenaga kesehatan dari rencana lanjutan; menambah tabel proses layanan saat ini dan usulan, tabel data yang dikumpulkan beserta perlindungannya, batas penggunaan backend, dan butir repositori pada kriteria selesai |
+| 2.2.1 | Perbaikan format saja (tanpa perubahan isi aturan): tanda kode yang rusak pada FR-401, NFR-04, dan SEC-03; penomoran A9 sampai A13; daftar centang bagian 16; G4 diselaraskan dengan NFR-12 (22 kasus uji) |
