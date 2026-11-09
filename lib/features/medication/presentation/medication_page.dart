@@ -213,6 +213,7 @@ class _MedicationPageState extends State<MedicationPage> {
             value: medication.isActive,
             onChanged: (value) async {
               await Services.medications.toggleActive(medication.id, value);
+              await Services.notifications.reschedule();
               await _load();
             },
           ),
@@ -281,6 +282,7 @@ class _MedicationPageState extends State<MedicationPage> {
             onPressed: () async {
               Navigator.of(dialogCtx).pop();
               await Services.medications.delete(medication.id);
+              await Services.notifications.reschedule();
               await _load();
               if (mounted) {
                 messenger.showSnackBar(

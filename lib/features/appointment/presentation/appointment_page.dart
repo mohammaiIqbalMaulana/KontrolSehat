@@ -160,6 +160,7 @@ class _AppointmentPageState extends State<AppointmentPage> {
                             a.id,
                             'done',
                           );
+                          await Services.notifications.reschedule();
                           await _load();
                         },
                         child: const Text('Tandai selesai'),
@@ -170,6 +171,7 @@ class _AppointmentPageState extends State<AppointmentPage> {
                             a.id,
                             'cancelled',
                           );
+                          await Services.notifications.reschedule();
                           await _load();
                         },
                         child: const Text('Batalkan'),
@@ -177,11 +179,11 @@ class _AppointmentPageState extends State<AppointmentPage> {
                     ],
                     const Spacer(),
                     IconButton(
-                      icon: const Icon(
-                        Icons.delete_outline,
-                        size: 20,
-                        color: Colors.grey,
-                      ),
+                      icon: const Icon(Icons.edit_outlined, size: 20),
+                      onPressed: () => _editAppointment(a),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, size: 20),
                       onPressed: () => _confirmDelete(a),
                     ),
                   ],
@@ -192,6 +194,15 @@ class _AppointmentPageState extends State<AppointmentPage> {
         );
       },
     );
+  }
+
+  Future<void> _editAppointment(Appointment appointment) async {
+    final ok = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (_) => AppointmentFormPage(appointment: appointment),
+      ),
+    );
+    if (ok == true) await _load();
   }
 
   Widget _buildHistoryBadge(Appointment a) {
@@ -287,6 +298,7 @@ class _AppointmentPageState extends State<AppointmentPage> {
             onPressed: () async {
               Navigator.of(dialogCtx).pop();
               await Services.appointments.delete(appointment.id);
+              await Services.notifications.reschedule();
               await _load();
               if (mounted) {
                 messenger.showSnackBar(

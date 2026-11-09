@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -32,6 +34,7 @@ Future<void> main() async {
     publishableKey: Env.supabaseKey,
   );
   Services.init(Supabase.instance.client);
+  unawaited(Services.notifications.reschedule());
 
   runApp(const KontrolSehatApp());
 }

@@ -4,9 +4,12 @@ import '../../../core/di/services.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/widgets/loading_button.dart';
+import '../data/appointment_model.dart';
 
 class AppointmentFormPage extends StatefulWidget {
-  const AppointmentFormPage({super.key});
+  const AppointmentFormPage({this.appointment, super.key});
+
+  final Appointment? appointment;
 
   @override
   State<AppointmentFormPage> createState() => _AppointmentFormPageState();
@@ -18,6 +21,21 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
   final _facilityController = TextEditingController();
   final _doctorController = TextEditingController();
   final _notesController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    final appointment = widget.appointment;
+    if (appointment != null) {
+      _titleController.text = appointment.title;
+      _facilityController.text = appointment.facility;
+      _doctorController.text = appointment.doctor ?? '';
+      _notesController.text = appointment.notes ?? '';
+      final local = appointment.scheduledAt.toLocal();
+      _scheduledAt = DateTime(local.year, local.month, local.day);
+      _scheduledTime = TimeOfDay(hour: local.hour, minute: local.minute);
+    }
+  }
 
   DateTime _scheduledAt = DateTime.now().add(const Duration(days: 7));
   TimeOfDay _scheduledTime = const TimeOfDay(hour: 9, minute: 0);
@@ -67,7 +85,7 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
       _scheduledTime.minute,
     );
 
-    if (fullScheduled.isBefore(DateTime.now())) {
+    if (widget.appointment == null && fullScheduled.isBefore(DateTime.now())) {
       setState(() => _error = 'Jadwal harus di masa depan');
       return;
     }
@@ -78,21 +96,39 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
     });
 
     try {
-      await Services.appointments.create(
-        title: _titleController.text.trim(),
-        facility: _facilityController.text.trim(),
-        doctor: _doctorController.text.trim().isEmpty
-            ? null
-            : _doctorController.text.trim(),
-        scheduledAt: fullScheduled,
-        notes: _notesController.text.trim().isEmpty
-            ? null
-            : _notesController.text.trim(),
-      );
+      if (widget.appointment != null) {
+        await Services.appointments.update(
+          id: widget.appointment!.id,
+          title: _titleController.text,
+          facility: _facilityController.text,
+          doctor: _doctorController.text,
+          scheduledAt: fullScheduled,
+          notes: _notesController.text,
+        );
+      } else {
+        await Services.appointments.create(
+          title: _titleController.text.trim(),
+          facility: _facilityController.text.trim(),
+          doctor: _doctorController.text.trim().isEmpty
+              ? null
+              : _doctorController.text.trim(),
+          scheduledAt: fullScheduled,
+          notes: _notesController.text.trim().isEmpty
+              ? null
+              : _notesController.text.trim(),
+        );
+      }
+      await Services.notifications.reschedule();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Jadwal kontrol ditambahkan')),
+          SnackBar(
+            content: Text(
+              widget.appointment == null
+                  ? 'Jadwal kontrol ditambahkan'
+                  : 'Jadwal kontrol diperbarui',
+            ),
+          ),
         );
         Navigator.of(context).pop(true);
       }
@@ -108,7 +144,13 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Tambah Jadwal Kontrol')),
+    appBar: AppBar(
+      title: Text(
+        widget.appointment == null
+            ? 'Tambah Jadwal Kontrol'
+            : 'Ubah Jadwal Kontrol',
+      ),
+    ),
     body: SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Form(

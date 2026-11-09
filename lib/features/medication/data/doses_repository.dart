@@ -43,6 +43,24 @@ class DosesRepository {
         .toList();
   }
 
+  Future<List<MedicationLog>> fetchPendingAhead({int daysAhead = 7}) async {
+    final now = DateTime.now().toUtc();
+    final until = now.add(Duration(days: daysAhead));
+    final rows = await _client
+        .from('medication_logs')
+        .select(
+          'id, medication_id, scheduled_at, status, medications(name, dosage)',
+        )
+        .eq('status', 'pending')
+        .gte('scheduled_at', now.toIso8601String())
+        .lte('scheduled_at', until.toIso8601String())
+        .order('scheduled_at');
+    return rows
+        .whereType<Map<String, dynamic>>()
+        .map(MedicationLog.fromJson)
+        .toList();
+  }
+
   Future<MedicationLog> updateStatus({
     required String id,
     required String status,

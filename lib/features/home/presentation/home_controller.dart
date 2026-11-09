@@ -19,12 +19,14 @@ class HomeController extends ChangeNotifier {
     required this.doses,
     required this.bp,
     required this.appointments,
+    this.rescheduleNotifications,
   });
 
   final ProfileRepository profiles;
   final DosesRepository doses;
   final BpRepository bp;
   final AppointmentRepository appointments;
+  final Future<void> Function()? rescheduleNotifications;
 
   HomeStatus _status = HomeStatus.loading;
   Profile? _profile;
@@ -70,6 +72,7 @@ class HomeController extends ChangeNotifier {
       _todayDoses = results[1] as List<MedicationLog>;
       _latestBp = results[2] as BpRecord?;
       _nearestAppointment = results[3] as Appointment?;
+      await rescheduleNotifications?.call();
       _status = HomeStatus.ready;
     } on Object catch (e) {
       _error = ErrorMapper.message(e);
@@ -81,6 +84,7 @@ class HomeController extends ChangeNotifier {
   Future<void> markDose(MedicationLog dose, String newStatus) async {
     try {
       await doses.updateStatus(id: dose.id, status: newStatus);
+      await rescheduleNotifications?.call();
       await load();
     } on Object catch (e) {
       _error = ErrorMapper.message(e);

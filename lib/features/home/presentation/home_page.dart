@@ -32,6 +32,7 @@ class _HomePageState extends State<HomePage> {
     doses: Services.doses,
     bp: Services.bp,
     appointments: Services.appointments,
+    rescheduleNotifications: Services.notifications.reschedule,
   );
 
   @override

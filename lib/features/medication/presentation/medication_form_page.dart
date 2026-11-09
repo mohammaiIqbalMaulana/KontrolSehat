@@ -173,6 +173,7 @@ class _MedicationFormPageState extends State<MedicationFormPage> {
           times: timeStrings,
         );
       }
+      await Services.notifications.reschedule();
       if (!mounted) return;
       Navigator.of(context).pop(true);
     } on Object {

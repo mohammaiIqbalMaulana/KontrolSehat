@@ -6,6 +6,8 @@ import '../../features/bp/data/bp_repository.dart';
 import '../../features/home/data/profile_repository.dart';
 import '../../features/medication/data/doses_repository.dart';
 import '../../features/medication/data/medication_repository.dart';
+import '../../features/notifications/notification_orchestrator.dart';
+import '../../features/notifications/notification_service.dart';
 import '../../features/stats/data/stats_repository.dart';
 
 /// Penyedia repository tunggal. Diisi sekali di `main` setelah Supabase
@@ -19,6 +21,7 @@ abstract final class Services {
   static late final AppointmentRepository appointments;
   static late final BpRepository bp;
   static late final StatsRepository stats;
+  static late final NotificationOrchestrator notifications;
 
   static void init(SupabaseClient client) {
     auth = AuthRepository(client);
@@ -28,5 +31,11 @@ abstract final class Services {
     appointments = AppointmentRepository(client);
     bp = BpRepository(client);
     stats = StatsRepository(client);
+    notifications = NotificationOrchestrator(
+      profileRepository: profiles,
+      dosesRepository: doses,
+      appointmentRepository: appointments,
+      notificationService: NotificationService.instance,
+    );
   }
 }

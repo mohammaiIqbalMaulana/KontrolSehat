@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
@@ -12,43 +14,59 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
   bool _initialized = false;
+  bool _exactAlarmAllowed = false;
 
   Future<void> init() async {
     if (_initialized) return;
     tz.initializeTimeZones();
-
     const androidSettings = AndroidInitializationSettings(
       '@mipmap/ic_launcher',
     );
-    const initSettings = InitializationSettings(android: androidSettings);
-
-    await _plugin.initialize(settings: initSettings);
+    await _plugin.initialize(
+      settings: const InitializationSettings(android: androidSettings),
+    );
     _initialized = true;
   }
 
   Future<bool> requestPermissions() async {
-    final androidImpl = _plugin
+    final android = _plugin
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
         >();
-    final notifGranted =
-        await androidImpl?.requestNotificationsPermission() ?? false;
-    final exactAlarmGranted =
-        await androidImpl?.requestExactAlarmsPermission() ?? false;
-    return notifGranted && exactAlarmGranted;
+    final notification =
+        await android?.requestNotificationsPermission() ?? false;
+    _exactAlarmAllowed = await android?.requestExactAlarmsPermission() ?? false;
+    return notification && _exactAlarmAllowed;
   }
 
-  /// Membatalkan seluruh notifikasi (FR-104 saat logout).
-  Future<void> cancelAll() async {
-    await _plugin.cancelAll();
+  Future<void> cancelAll() => _plugin.cancelAll();
+
+  Future<void> cancelDose(String doseId) =>
+      _plugin.cancel(id: doseNotificationId(doseId));
+
+  Future<void> cancelAppointment(String appointmentId) async {
+    await _plugin.cancel(id: appointmentNotificationId(appointmentId, 'h1'));
+    await _plugin.cancel(id: appointmentNotificationId(appointmentId, '2h'));
   }
 
-  /// Membatalkan notifikasi untuk satu dosis tertentu (FR-904).
-  Future<void> cancelDose(String doseId) async {
-    await _plugin.cancel(id: doseId.hashCode);
+  static int doseNotificationId(String id) => _stableId('dose:$id');
+
+  static int appointmentNotificationId(String id, String kind) =>
+      _stableId('appointment:$kind:$id');
+
+  static int _stableId(String input) {
+    var hash = 0x811c9dc5;
+    for (final byte in utf8.encode(input)) {
+      hash ^= byte;
+      hash = (hash * 0x01000193) & 0x7fffffff;
+    }
+    return hash;
   }
 
-  /// Menjadwalkan pengingat minum obat 7 hari ke depan (FR-901, FR-903).
+  AndroidScheduleMode get _scheduleMode => _exactAlarmAllowed
+      ? AndroidScheduleMode.exactAllowWhileIdle
+      : AndroidScheduleMode.inexactAllowWhileIdle;
+
   Future<void> scheduleDose({
     required String doseId,
     required String medicationName,
@@ -56,116 +74,107 @@ class NotificationService {
     required DateTime scheduledAt,
     required String timezoneName,
   }) async {
-    if (scheduledAt.isBefore(DateTime.now())) return;
-
     final location = tz.getLocation(timezoneName);
-    final tzScheduled = tz.TZDateTime.from(scheduledAt, location);
-
-    const androidDetails = AndroidNotificationDetails(
-      'medication_reminders',
-      'Pengingat Obat',
-      channelDescription: 'Notifikasi jadwal minum obat harian',
-      importance: Importance.max,
-      priority: Priority.high,
-      visibility:
-          NotificationVisibility.private, // SEC-09: privat di lockscreen
+    final scheduled = tz.TZDateTime.from(scheduledAt.toUtc(), location);
+    if (!scheduled.isAfter(tz.TZDateTime.now(location))) return;
+    const details = NotificationDetails(
+      android: AndroidNotificationDetails(
+        'medication_reminders',
+        'Pengingat Obat',
+        channelDescription: 'Notifikasi jadwal minum obat',
+        importance: Importance.max,
+        priority: Priority.high,
+        visibility: NotificationVisibility.private,
+      ),
     );
-
-    const details = NotificationDetails(android: androidDetails);
-
     await _plugin.zonedSchedule(
-      id: doseId.hashCode,
-      title: 'Waktunya minum obat', // Judul publik / umum
-      body: '$medicationName, $dosage', // Isi spesifik (terlihat saat unlock)
-      scheduledDate: tzScheduled,
+      id: doseNotificationId(doseId),
+      title: 'Waktunya minum obat',
+      body: '$medicationName, $dosage',
+      scheduledDate: scheduled,
       notificationDetails: details,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      androidScheduleMode: _scheduleMode,
     );
   }
 
-  /// Menjadwalkan pengingat kontrol (FR-902): H-1 jam 18:00 dan 2 jam sebelum jadwal.
   Future<void> scheduleAppointment({
     required Appointment appointment,
     required String timezoneName,
   }) async {
-    final now = DateTime.now();
     final location = tz.getLocation(timezoneName);
-
-    // 1. Notifikasi H-1 jam 18:00
-    final hMinus1 = appointment.scheduledAt.subtract(const Duration(days: 1));
-    final hMinus1Evening = DateTime(
-      hMinus1.year,
-      hMinus1.month,
-      hMinus1.day,
-      18,
-      0,
+    final scheduled = tz.TZDateTime.from(
+      appointment.scheduledAt.toUtc(),
+      location,
     );
-
-    if (hMinus1Evening.isAfter(now)) {
+    final h1 = tz.TZDateTime(
+      location,
+      scheduled.year,
+      scheduled.month,
+      scheduled.day - 1,
+      18,
+    );
+    final twoHours = scheduled.subtract(const Duration(hours: 2));
+    const details = NotificationDetails(
+      android: AndroidNotificationDetails(
+        'appointment_reminders',
+        'Pengingat Kontrol',
+        channelDescription: 'Notifikasi jadwal kontrol',
+        importance: Importance.high,
+        priority: Priority.high,
+        visibility: NotificationVisibility.private,
+      ),
+    );
+    if (h1.isAfter(tz.TZDateTime.now(location))) {
       await _plugin.zonedSchedule(
-        id: '${appointment.id}_h1'.hashCode,
-        title: 'Pengingat Kontrol Besok',
-        body: 'Jadwal kontrol di ${appointment.facility} besok',
-        scheduledDate: tz.TZDateTime.from(hMinus1Evening, location),
-        notificationDetails: const NotificationDetails(
-          android: AndroidNotificationDetails(
-            'appointment_reminders',
-            'Pengingat Kontrol',
-            importance: Importance.high,
-            priority: Priority.high,
-          ),
-        ),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        id: appointmentNotificationId(appointment.id, 'h1'),
+        title: 'Pengingat kontrol',
+        body: 'Jadwal kontrol besok',
+        scheduledDate: h1,
+        notificationDetails: details,
+        androidScheduleMode: _scheduleMode,
       );
     }
-
-    // 2. Notifikasi 2 jam sebelum jadwal kontrol
-    final twoHoursBefore = appointment.scheduledAt.subtract(
-      const Duration(hours: 2),
-    );
-    if (twoHoursBefore.isAfter(now)) {
+    if (twoHours.isAfter(tz.TZDateTime.now(location))) {
       await _plugin.zonedSchedule(
-        id: '${appointment.id}_2h'.hashCode,
-        title: 'Pengingat Jadwal Kontrol',
-        body: '2 jam lagi: kontrol di ${appointment.facility}',
-        scheduledDate: tz.TZDateTime.from(twoHoursBefore, location),
-        notificationDetails: const NotificationDetails(
-          android: AndroidNotificationDetails(
-            'appointment_reminders',
-            'Pengingat Kontrol',
-            importance: Importance.high,
-            priority: Priority.high,
-          ),
-        ),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        id: appointmentNotificationId(appointment.id, '2h'),
+        title: 'Pengingat kontrol',
+        body: 'Jadwal kontrol dalam 2 jam',
+        scheduledDate: twoHours,
+        notificationDetails: details,
+        androidScheduleMode: _scheduleMode,
       );
     }
   }
 
-  /// Menjadwalkan ulang seluruh dosis aktif dan jadwal kontrol (FR-903).
   Future<void> rescheduleAll({
     required List<MedicationLog> doses,
     required List<Appointment> appointments,
     required String timezoneName,
+    bool medicationEnabled = true,
+    bool appointmentEnabled = true,
   }) async {
     await cancelAll();
-    for (final dose in doses) {
-      if (dose.status == 'pending') {
-        await scheduleDose(
-          doseId: dose.id,
-          medicationName: dose.medicationName,
-          dosage: dose.dosage,
-          scheduledAt: dose.scheduledAt,
-          timezoneName: timezoneName,
-        );
+    if (medicationEnabled) {
+      for (final dose in doses) {
+        if (dose.status == 'pending') {
+          await scheduleDose(
+            doseId: dose.id,
+            medicationName: dose.medicationName,
+            dosage: dose.dosage,
+            scheduledAt: dose.scheduledAt,
+            timezoneName: timezoneName,
+          );
+        }
       }
     }
-    for (final appt in appointments) {
-      if (appt.status == 'upcoming' && !appt.isPast) {
-        await scheduleAppointment(
-          appointment: appt,
-          timezoneName: timezoneName,
-        );
+    if (appointmentEnabled) {
+      for (final appointment in appointments) {
+        if (appointment.status == 'upcoming' && !appointment.isPast) {
+          await scheduleAppointment(
+            appointment: appointment,
+            timezoneName: timezoneName,
+          );
+        }
       }
     }
   }

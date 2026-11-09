@@ -29,6 +29,22 @@ class AppointmentRepository {
     return rows.isEmpty ? null : Appointment.fromJson(rows.first);
   }
 
+  Future<List<Appointment>> fetchUpcomingAhead({int daysAhead = 7}) async {
+    final now = DateTime.now().toUtc();
+    final until = now.add(Duration(days: daysAhead));
+    final rows = await _client
+        .from('appointments')
+        .select('id, title, facility, doctor, scheduled_at, notes, status')
+        .eq('status', 'upcoming')
+        .gte('scheduled_at', now.toIso8601String())
+        .lte('scheduled_at', until.toIso8601String())
+        .order('scheduled_at');
+    return rows
+        .whereType<Map<String, dynamic>>()
+        .map(Appointment.fromJson)
+        .toList();
+  }
+
   Future<Appointment> create({
     required String title,
     required String facility,
@@ -48,6 +64,26 @@ class AppointmentRepository {
         .select('id, title, facility, doctor, scheduled_at, notes, status')
         .single();
     return Appointment.fromJson(row);
+  }
+
+  Future<void> update({
+    required String id,
+    required String title,
+    required String facility,
+    required String? doctor,
+    required DateTime scheduledAt,
+    required String? notes,
+  }) async {
+    await _client
+        .from('appointments')
+        .update(<String, Object?>{
+          'title': title.trim(),
+          'facility': facility.trim(),
+          'doctor': doctor?.trim().isEmpty == true ? null : doctor?.trim(),
+          'scheduled_at': scheduledAt.toUtc().toIso8601String(),
+          'notes': notes?.trim().isEmpty == true ? null : notes?.trim(),
+        })
+        .eq('id', id);
   }
 
   Future<void> updateStatus(String id, String status) async {

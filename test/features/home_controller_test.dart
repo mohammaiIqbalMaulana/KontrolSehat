@@ -51,6 +51,10 @@ class FakeDosesRepo implements DosesRepository {
   Future<List<MedicationLog>> fetchToday() async => list;
 
   @override
+  Future<List<MedicationLog>> fetchPendingAhead({int daysAhead = 7}) async =>
+      list;
+
+  @override
   Future<MedicationLog> updateStatus({
     required String id,
     required String status,
@@ -97,6 +101,20 @@ class FakeAppointmentRepo implements AppointmentRepository {
 
   @override
   Future<List<Appointment>> fetchAll() async => <Appointment>[];
+
+  @override
+  Future<List<Appointment>> fetchUpcomingAhead({int daysAhead = 7}) async =>
+      <Appointment>[];
+
+  @override
+  Future<void> update({
+    required String id,
+    required String title,
+    required String facility,
+    required String? doctor,
+    required DateTime scheduledAt,
+    required String? notes,
+  }) async {}
 
   @override
   Future<Appointment> create({
