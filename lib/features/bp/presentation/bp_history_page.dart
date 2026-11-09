@@ -68,28 +68,50 @@ class _BpHistoryPageState extends State<BpHistoryPage> {
     if (ok == true) await _load();
   }
 
+  /// Chip dengan kontras tegas: terpilih = warna utama penuh + teks kontras,
+  /// tidak terpilih = permukaan kartu + garis tepi + teks biasa. Warna
+  /// diambil dari ColorScheme supaya terbaca di tema terang maupun gelap.
+  Widget _filterChip({
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: ChoiceChip(
+        label: Text(label),
+        selected: selected,
+        onSelected: (_) => onTap(),
+        showCheckmark: true,
+        checkmarkColor: scheme.onPrimary,
+        backgroundColor: scheme.surface,
+        selectedColor: scheme.primary,
+        side: BorderSide(color: selected ? scheme.primary : scheme.outline),
+        labelStyle: TextStyle(
+          color: selected ? scheme.onPrimary : scheme.onSurface,
+          fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+        ),
+      ),
+    );
+  }
+
   Widget _categoryChips() => SizedBox(
     height: 48,
     child: ListView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 20),
       children: <Widget>[
-        Padding(
-          padding: const EdgeInsets.only(right: 8),
-          child: ChoiceChip(
-            label: const Text('Semua'),
-            selected: _categoryFilter == null,
-            onSelected: (_) => setState(() => _categoryFilter = null),
-          ),
+        _filterChip(
+          label: 'Semua',
+          selected: _categoryFilter == null,
+          onTap: () => setState(() => _categoryFilter = null),
         ),
         for (final c in BpCategory.values)
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: ChoiceChip(
-              label: Text(c.label),
-              selected: _categoryFilter == c,
-              onSelected: (_) => setState(() => _categoryFilter = c),
-            ),
+          _filterChip(
+            label: c.label,
+            selected: _categoryFilter == c,
+            onTap: () => setState(() => _categoryFilter = c),
           ),
       ],
     ),

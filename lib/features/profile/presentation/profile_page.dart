@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -187,19 +188,24 @@ class _ProfilePageState extends State<ProfilePage> {
                       trailing: const Icon(Icons.chevron_right),
                       onTap: _showBatterySettingsInfo,
                     ),
-                    const Divider(),
-                    ListTile(
-                      leading: const Icon(Icons.notifications_active_outlined),
-                      title: const Text('Uji notifikasi'),
-                      subtitle: const Text(
-                        'Periksa izin dan jadwal pengingat',
+                    // Alat bantu pengembang: tidak tampil di build release.
+                    if (kDebugMode) ...<Widget>[
+                      const Divider(),
+                      ListTile(
+                        leading: const Icon(
+                          Icons.notifications_active_outlined,
+                        ),
+                        title: const Text('Uji notifikasi (debug)'),
+                        subtitle: const Text(
+                          'Periksa izin dan jadwal pengingat',
+                        ),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => showDialog<void>(
+                          context: context,
+                          builder: (_) => const NotificationTestDialog(),
+                        ),
                       ),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => showDialog<void>(
-                        context: context,
-                        builder: (_) => const NotificationTestDialog(),
-                      ),
-                    ),
+                    ],
                     const Divider(),
                     ListTile(
                       leading: const Icon(Icons.info_outline),
