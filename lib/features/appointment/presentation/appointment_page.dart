@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../core/di/services.dart';
 import '../../../core/utils/app_time.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/widgets/note_preview.dart';
 import '../../../core/widgets/retry_view.dart';
 import '../../../core/widgets/soft_card.dart';
 import '../data/appointment_model.dart';
@@ -152,6 +153,7 @@ class _AppointmentPageState extends State<AppointmentPage> {
                   formattedDate,
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
+                NotePreview(text: a.notes),
                 const SizedBox(height: 8),
                 Row(
                   children: <Widget>[

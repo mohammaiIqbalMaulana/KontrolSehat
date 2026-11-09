@@ -7,6 +7,7 @@ import '../../../core/utils/app_time.dart';
 import '../../../core/utils/bp_classifier.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/bp_status_chip.dart';
+import '../../../core/widgets/note_preview.dart';
 import '../../../core/widgets/retry_view.dart';
 import '../../../core/widgets/soft_card.dart';
 import '../data/bp_model.dart';
@@ -190,10 +191,11 @@ class _BpHistoryPageState extends State<BpHistoryPage> {
                                     ),
                                     if (r.pulse != null)
                                       Text(
-                                        'Nadi: ${r.pulse} bpm · ${Fmt.date(AppTime.toZone(r.measuredAt))}',
+                                        'Nadi: ${r.pulse} bpm      ${Fmt.date(AppTime.toZone(r.measuredAt))}',
                                       ),
                                     if (r.pulse == null)
                                       Text(Fmt.date(AppTime.toZone(r.measuredAt))),
+                                    NotePreview(text: r.note),
                                   ],
                                 ),
                               ),

@@ -7,6 +7,7 @@ import '../../../core/utils/app_time.dart';
 import '../../../core/utils/dose_status.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/loading_button.dart';
+import '../../../core/widgets/note_preview.dart';
 import '../../../core/widgets/retry_view.dart';
 import '../../../core/widgets/soft_card.dart';
 import '../data/medication_models.dart';
@@ -255,6 +256,7 @@ class _MedicationPageState extends State<MedicationPage> {
                   Text(
                     '${medication.dosage} · ${medication.times.map((t) => t.timeOfDay.substring(0, 5)).join(', ')}',
                   ),
+                  NotePreview(text: medication.notes),
                 ],
               ),
             ),
