@@ -3,9 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../core/di/services.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/utils/bp_classifier.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/widgets/bp_status_chip.dart';
 import '../../../core/widgets/retry_view.dart';
 import '../../../core/widgets/soft_card.dart';
 import '../data/bp_model.dart';
@@ -130,23 +129,7 @@ class _BpHistoryPageState extends State<BpHistoryPage> {
                                 ),
                                 onPressed: () => _confirmDelete(r),
                               ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: _categoryBg(r.category),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  r.category.label,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ),
+                              BpStatusChip(category: r.category),
                             ],
                           ),
                         ),
@@ -183,12 +166,4 @@ class _BpHistoryPageState extends State<BpHistoryPage> {
       ),
     );
   }
-
-  Color _categoryBg(BpCategory cat) => switch (cat) {
-    BpCategory.normal => AppColors.bpNormal,
-    BpCategory.elevated => AppColors.bpElevated,
-    BpCategory.high => AppColors.bpHigh,
-    BpCategory.veryHigh => AppColors.bpVeryHigh,
-    BpCategory.low => AppColors.bpLow,
-  };
 }

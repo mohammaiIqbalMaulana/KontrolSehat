@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/di/services.dart';
-import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/bp_classifier.dart';
 import '../../../core/utils/validators.dart';
+import '../../../core/widgets/bp_status_chip.dart';
 import '../../../core/widgets/loading_button.dart';
 import '../../../core/widgets/soft_card.dart';
 
@@ -157,27 +157,11 @@ class _BpEntryPageState extends State<BpEntryPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _categoryBg(_category!),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        _category!.label,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.navy,
-                        ),
-                      ),
-                    ),
+                    BpStatusChip(category: _category!),
                     const SizedBox(height: 8),
                     Text(
                       _category!.advice,
-                      style: const TextStyle(fontSize: 14),
+                      style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ],
                 ),
@@ -201,12 +185,4 @@ class _BpEntryPageState extends State<BpEntryPage> {
       ),
     ),
   );
-
-  Color _categoryBg(BpCategory cat) => switch (cat) {
-    BpCategory.normal => AppColors.bpNormal,
-    BpCategory.elevated => AppColors.bpElevated,
-    BpCategory.high => AppColors.bpHigh,
-    BpCategory.veryHigh => AppColors.bpVeryHigh,
-    BpCategory.low => AppColors.bpLow,
-  };
 }

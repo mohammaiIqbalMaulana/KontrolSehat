@@ -4,10 +4,10 @@ import 'package:flutter/material.dart';
 
 import '../../../core/di/services.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/utils/bp_classifier.dart';
 import '../../../core/utils/dose_status.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/app_background.dart';
+import '../../../core/widgets/bp_status_chip.dart';
 import '../../../core/widgets/loading_button.dart';
 import '../../../core/widgets/responsive_center.dart';
 import '../../../core/widgets/retry_view.dart';
@@ -202,22 +202,30 @@ class _HomePageState extends State<HomePage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: <Widget>[
-              const Text(
+              Text(
                 'Obat berikutnya',
-                style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+                style: Theme.of(context).textTheme.bodySmall,
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppColors.gradientTop,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  status.label,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.navy,
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    status.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Theme.of(context).colorScheme.onPrimaryContainer,
+                    ),
                   ),
                 ),
               ),
@@ -297,12 +305,9 @@ class _HomePageState extends State<HomePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                const Text(
+                Text(
                   'Progres hari ini',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppColors.textSecondary,
-                  ),
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
                 Text(
                   '$taken dari $total dosis diminum',
@@ -351,12 +356,9 @@ class _HomePageState extends State<HomePage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: <Widget>[
-                const Text(
+                Text(
                   'Tekanan darah terakhir',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppColors.textSecondary,
-                  ),
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
                 TextButton(
                   onPressed: () => Navigator.of(context).push<void>(
@@ -379,32 +381,13 @@ class _HomePageState extends State<HomePage> {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: _categoryBg(bp.category),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    bp.category.label,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
+                BpStatusChip(category: bp.category),
               ],
             ),
             const SizedBox(height: 4),
             Text(
               Fmt.date(bp.measuredAt.toLocal()),
-              style: const TextStyle(
-                fontSize: 12,
-                color: AppColors.textSecondary,
-              ),
+              style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
         ),
@@ -445,16 +428,19 @@ class _HomePageState extends State<HomePage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: <Widget>[
-              const Text(
-                'Kontrol terdekat',
-                style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
-              ),
               Text(
-                countdown,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.blue,
-                  fontWeight: FontWeight.w600,
+                'Kontrol terdekat',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              Flexible(
+                child: Text(
+                  countdown,
+                  textAlign: TextAlign.end,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
@@ -468,21 +454,10 @@ class _HomePageState extends State<HomePage> {
             Text('Dokter: ${a.doctor!}'),
           Text(
             '${Fmt.date(a.scheduledAt.toLocal())} · ${Fmt.time(a.scheduledAt.toLocal())}',
-            style: const TextStyle(
-              fontSize: 12,
-              color: AppColors.textSecondary,
-            ),
+            style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
       ),
     );
   }
-
-  Color _categoryBg(BpCategory cat) => switch (cat) {
-    BpCategory.normal => AppColors.bpNormal,
-    BpCategory.elevated => AppColors.bpElevated,
-    BpCategory.high => AppColors.bpHigh,
-    BpCategory.veryHigh => AppColors.bpVeryHigh,
-    BpCategory.low => AppColors.bpLow,
-  };
 }

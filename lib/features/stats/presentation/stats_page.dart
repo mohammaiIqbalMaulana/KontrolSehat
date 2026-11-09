@@ -127,15 +127,10 @@ class _StatsPageState extends State<StatsPage> {
         children: <Widget>[
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            child: SegmentedButton<int>(
-              segments: const <ButtonSegment<int>>[
-                ButtonSegment<int>(value: 0, label: Text('Harian')),
-                ButtonSegment<int>(value: 1, label: Text('Mingguan')),
-                ButtonSegment<int>(value: 2, label: Text('Bulanan')),
-              ],
-              selected: <int>{_tabIndex},
-              onSelectionChanged: (val) {
-                setState(() => _tabIndex = val.first);
+            child: _PeriodSelector(
+              selected: _tabIndex,
+              onChanged: (int value) {
+                setState(() => _tabIndex = value);
                 unawaited(_load());
               },
             ),
@@ -158,12 +153,11 @@ class _StatsPageState extends State<StatsPage> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: <Widget>[
-                                    const Text(
+                                    Text(
                                       'Kepatuhan',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: AppColors.textSecondary,
-                                      ),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall,
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
@@ -188,21 +182,22 @@ class _StatsPageState extends State<StatsPage> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: <Widget>[
-                                    const Text(
+                                    Text(
                                       'Rata-rata tensi',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: AppColors.textSecondary,
-                                      ),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall,
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
                                       avgSys != null ? '$avgSys/$avgDia' : '–',
-                                      style: const TextStyle(
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.w700,
-                                        color: AppColors.navy,
-                                      ),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .headlineSmall
+                                          ?.copyWith(
+                                            fontSize: 24,
+                                            fontWeight: FontWeight.w700,
+                                          ),
                                     ),
                                     Text(
                                       '${_bpRecords.length} pengukuran',
@@ -593,6 +588,56 @@ class _DailyBpPoint {
   final double systolic;
   final double diastolic;
   final int count;
+}
+
+class _PeriodSelector extends StatelessWidget {
+  const _PeriodSelector({required this.selected, required this.onChanged});
+
+  final int selected;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    const labels = <String>['Harian', 'Mingguan', 'Bulanan'];
+    return Container(
+      height: 48,
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        border: Border.all(color: scheme.outline),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        children: List<Widget>.generate(labels.length, (index) {
+          final active = selected == index;
+          return Expanded(
+            child: GestureDetector(
+              onTap: () => onChanged(index),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 160),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: active ? scheme.primary : Colors.transparent,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  labels[index],
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: active ? scheme.onPrimary : scheme.onSurfaceVariant,
+                    fontSize: 13,
+                    fontWeight: active ? FontWeight.w700 : FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
 }
 
 class _MonthlyBlock {

@@ -25,6 +25,27 @@ abstract final class AppTheme {
         elevation: 0,
         centerTitle: false,
       ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: Colors.white.withValues(alpha: 0.92),
+        indicatorColor: AppColors.primary.withValues(alpha: 0.14),
+        overlayColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.pressed)) {
+            return AppColors.primary.withValues(alpha: 0.08);
+          }
+          return Colors.transparent;
+        }),
+        labelTextStyle: const WidgetStatePropertyAll(
+          TextStyle(
+            color: navy,
+            fontFamily: fontFamily,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        iconTheme: const WidgetStatePropertyAll(
+          IconThemeData(color: AppColors.textSecondary),
+        ),
+      ),
       inputDecorationTheme: _inputTheme(
         fill: Colors.white,
         text: navy,
@@ -82,6 +103,12 @@ abstract final class AppTheme {
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: surface,
         indicatorColor: primary.withValues(alpha: 0.24),
+        overlayColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.pressed)) {
+            return primary.withValues(alpha: 0.10);
+          }
+          return Colors.transparent;
+        }),
         labelTextStyle: const WidgetStatePropertyAll(
           TextStyle(
             color: text,
@@ -154,10 +181,39 @@ abstract final class AppTheme {
         );
     return base.copyWith(
       textTheme: text,
+      splashFactory: NoSplash.splashFactory,
+      splashColor: Colors.transparent,
+      hoverColor: scheme.primary.withValues(alpha: 0.05),
+      focusColor: scheme.primary.withValues(alpha: 0.10),
+      highlightColor: scheme.primary.withValues(alpha: 0.06),
+      listTileTheme: ListTileThemeData(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        tileColor: Colors.transparent,
+        selectedTileColor: scheme.primary.withValues(alpha: 0.10),
+        titleTextStyle: TextStyle(
+          color: scheme.onSurface,
+          fontFamily: fontFamily,
+        ),
+        subtitleTextStyle: TextStyle(
+          color: scheme.onSurfaceVariant,
+          fontFamily: fontFamily,
+        ),
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: ButtonStyle(
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.pressed)) {
+              return scheme.primary.withValues(alpha: 0.10);
+            }
+            return Colors.transparent;
+          }),
+        ),
+      ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           minimumSize: const Size.fromHeight(52),
           shape: const StadiumBorder(),
+          overlayColor: scheme.onPrimary.withValues(alpha: 0.12),
           textStyle: const TextStyle(
             fontFamily: fontFamily,
             fontSize: 16,
@@ -171,6 +227,7 @@ abstract final class AppTheme {
           shape: const StadiumBorder(),
           side: BorderSide(color: scheme.primary),
           foregroundColor: scheme.primary,
+          overlayColor: scheme.primary.withValues(alpha: 0.10),
           textStyle: const TextStyle(
             fontFamily: fontFamily,
             fontSize: 16,

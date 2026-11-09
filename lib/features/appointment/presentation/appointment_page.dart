@@ -124,12 +124,18 @@ class _AppointmentPageState extends State<AppointmentPage> {
                       ),
                     ),
                     if (!isHistory)
-                      Text(
-                        Fmt.countdown(a.scheduledAt.toLocal(), DateTime.now()),
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.blue,
-                          fontWeight: FontWeight.w600,
+                      Flexible(
+                        child: Text(
+                          Fmt.countdown(
+                            a.scheduledAt.toLocal(),
+                            DateTime.now(),
+                          ),
+                          textAlign: TextAlign.end,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Theme.of(context).colorScheme.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       )
                     else
@@ -142,7 +148,7 @@ class _AppointmentPageState extends State<AppointmentPage> {
                   Text('Dokter: ${a.doctor!}'),
                 Text(
                   formattedDate,
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
                 const SizedBox(height: 8),
                 Row(

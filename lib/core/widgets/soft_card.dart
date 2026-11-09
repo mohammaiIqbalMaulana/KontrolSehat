@@ -11,18 +11,13 @@ class SoftCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: isDark ? colors.surface : colors.surface.withValues(alpha: 0.85),
-        borderRadius: const BorderRadius.all(Radius.circular(24)),
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: colors.primary.withValues(alpha: isDark ? 0.18 : 0.08),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
+    final surface = isDark ? colors.surfaceContainer : colors.surface;
+    return Material(
+      color: surface,
+      elevation: isDark ? 2 : 1,
+      shadowColor: Colors.black.withValues(alpha: isDark ? 0.28 : 0.10),
+      borderRadius: const BorderRadius.all(Radius.circular(24)),
+      clipBehavior: Clip.antiAlias,
       child: Padding(
         padding: padding ?? const EdgeInsets.all(20),
         child: child,
