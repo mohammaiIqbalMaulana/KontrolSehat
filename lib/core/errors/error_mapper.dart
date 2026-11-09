@@ -48,7 +48,7 @@ abstract final class ErrorMapper {
       return 'Email sudah terdaftar';
     }
     if (msg.contains('password')) {
-      return 'Password minimal 8 karakter dan memuat huruf serta angka';
+      return 'Password minimal 8 karakter ada huruf & angka';
     }
     return generic;
   }

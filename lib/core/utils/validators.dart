@@ -37,7 +37,7 @@ abstract final class Validators {
         RegExp('[0-9]').hasMatch(s);
     return ok
         ? null
-        : 'Password minimal 8 karakter dan memuat huruf serta angka';
+        : 'Password minimal 8 karakter ada huruf & angka';
   }
 
   /// Login: hanya wajib diisi.

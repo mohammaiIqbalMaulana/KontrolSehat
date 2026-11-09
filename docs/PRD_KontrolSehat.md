@@ -333,7 +333,7 @@ Validasi dilakukan di aplikasi (pesan langsung di bawah kolom) dan diulang di da
 | Nama lengkap | Ya | 2 sampai 50 karakter | Nama harus 2 sampai 50 karakter |
 | Tahun lahir | Ya | Bilangan bulat dari (tahun berjalan − 100) sampai (tahun berjalan − 18); pada 2026 berarti 1926 sampai 2008 | Tahun lahir tidak valid |
 | Email | Ya | Format email valid, maksimal 254 karakter | Format email tidak valid |
-| Password | Ya | Registrasi: minimal 8 karakter, memuat minimal 1 huruf dan 1 angka. Login: hanya wajib diisi | Password minimal 8 karakter dan memuat huruf serta angka |
+| Password | Ya | Registrasi: minimal 8 karakter, memuat minimal 1 huruf dan 1 angka. Login: hanya wajib diisi | Password minimal 8 karakter ada huruf & angkaa |
 
 ### 10.2 Obat
 
