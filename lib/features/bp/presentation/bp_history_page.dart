@@ -191,7 +191,7 @@ class _BpHistoryPageState extends State<BpHistoryPage> {
                                     ),
                                     if (r.pulse != null)
                                       Text(
-                                        'Nadi: ${r.pulse} bpm      ${Fmt.date(AppTime.toZone(r.measuredAt))}',
+                                        'Nadi: ${r.pulse} bpm       ${Fmt.date(AppTime.toZone(r.measuredAt))}',
                                       ),
                                     if (r.pulse == null)
                                       Text(Fmt.date(AppTime.toZone(r.measuredAt))),
