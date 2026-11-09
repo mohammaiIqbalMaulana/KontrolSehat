@@ -8,6 +8,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/widgets/soft_card.dart';
 import '../../notifications/notification_service.dart';
+import '../../notifications/notification_test_dialog.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -67,7 +68,9 @@ class _ProfilePageState extends State<ProfilePage> {
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(key, value);
-    if (!value) await NotificationService.instance.cancelAll();
+    // Jadwal dibangun ulang sesuai saklar terbaru (tidak lagi membatalkan
+    // pengingat jenis lain).
+    await Services.notifications.reschedule();
     if (!mounted) return;
     setState(() {
       if (key == 'medication_reminder') {
@@ -183,6 +186,19 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: _showBatterySettingsInfo,
+                    ),
+                    const Divider(),
+                    ListTile(
+                      leading: const Icon(Icons.notifications_active_outlined),
+                      title: const Text('Uji notifikasi'),
+                      subtitle: const Text(
+                        'Periksa izin dan jadwal pengingat',
+                      ),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => showDialog<void>(
+                        context: context,
+                        builder: (_) => const NotificationTestDialog(),
+                      ),
                     ),
                     const Divider(),
                     ListTile(

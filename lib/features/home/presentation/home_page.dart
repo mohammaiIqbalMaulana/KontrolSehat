@@ -16,6 +16,7 @@ import '../../appointment/presentation/appointment_form_page.dart';
 import '../../bp/presentation/bp_entry_page.dart';
 import '../../bp/presentation/bp_history_page.dart';
 import '../../medication/presentation/medication_form_page.dart';
+import '../../notifications/notification_service.dart';
 import '../../profile/presentation/profile_page.dart';
 import 'home_controller.dart';
 
@@ -26,7 +27,7 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   late final HomeController _controller = HomeController(
     profiles: Services.profiles,
     doses: Services.doses,
@@ -38,11 +39,30 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     unawaited(_controller.load());
+    unawaited(_askNotificationPermission());
+  }
+
+  /// Meminta izin notifikasi + alarm tepat waktu (FR-906), lalu menjadwalkan
+  /// ulang agar mode alarm mengikuti izin terbaru.
+  Future<void> _askNotificationPermission() async {
+    await NotificationService.instance.requestPermissions();
+    await Services.notifications.reschedule();
+  }
+
+  /// Saat app dibuka kembali (misalnya setelah pengguna mengaktifkan izin di
+  /// pengaturan sistem), jadwalkan ulang notifikasi (FR-903).
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(Services.notifications.reschedule());
+    }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _controller.dispose();
     super.dispose();
   }
