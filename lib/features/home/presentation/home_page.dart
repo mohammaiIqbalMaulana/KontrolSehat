@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/di/services.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/app_time.dart';
 import '../../../core/utils/dose_status.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/app_background.dart';
@@ -11,6 +12,7 @@ import '../../../core/widgets/bp_status_chip.dart';
 import '../../../core/widgets/loading_button.dart';
 import '../../../core/widgets/responsive_center.dart';
 import '../../../core/widgets/retry_view.dart';
+import '../../../core/widgets/skeleton.dart';
 import '../../../core/widgets/soft_card.dart';
 import '../../appointment/presentation/appointment_form_page.dart';
 import '../../bp/presentation/bp_entry_page.dart';
@@ -76,7 +78,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           builder: (context, _) {
             switch (_controller.status) {
               case HomeStatus.loading:
-                return const Center(child: CircularProgressIndicator());
+                return const SkeletonList();
               case HomeStatus.failed:
                 return RetryView(
                   message: _controller.error ?? 'Terjadi kesalahan.',
@@ -212,8 +214,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
     final status = evaluateDoseStatus(
       rawStatus: dose.status,
-      scheduledAt: dose.scheduledAt.toLocal(),
-      now: DateTime.now(),
+      scheduledAt: AppTime.toZone(dose.scheduledAt),
+      now: AppTime.now(),
     );
 
     return SoftCard(
@@ -258,7 +260,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
           ),
           Text(
-            'Jadwal: ${Fmt.time(dose.scheduledAt.toLocal())}',
+            'Jadwal: ${Fmt.time(AppTime.toZone(dose.scheduledAt))}',
             style: const TextStyle(fontSize: 14),
           ),
           if (status.canAction) ...<Widget>[
@@ -407,7 +409,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             ),
             const SizedBox(height: 4),
             Text(
-              Fmt.date(bp.measuredAt.toLocal()),
+              Fmt.date(AppTime.toZone(bp.measuredAt)),
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
@@ -441,7 +443,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       );
     }
 
-    final countdown = Fmt.countdown(a.scheduledAt.toLocal(), DateTime.now());
+    final countdown = Fmt.countdown(AppTime.toZone(a.scheduledAt), AppTime.now());
     return SoftCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -474,7 +476,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           if (a.doctor != null && a.doctor!.isNotEmpty)
             Text('Dokter: ${a.doctor!}'),
           Text(
-            '${Fmt.date(a.scheduledAt.toLocal())} · ${Fmt.time(a.scheduledAt.toLocal())}',
+            '${Fmt.date(AppTime.toZone(a.scheduledAt))} · ${Fmt.time(AppTime.toZone(a.scheduledAt))}',
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ],

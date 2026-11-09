@@ -6,9 +6,13 @@ import '../../../core/utils/validators.dart';
 import '../../../core/widgets/bp_status_chip.dart';
 import '../../../core/widgets/loading_button.dart';
 import '../../../core/widgets/soft_card.dart';
+import '../data/bp_model.dart';
 
 class BpEntryPage extends StatefulWidget {
-  const BpEntryPage({super.key});
+  const BpEntryPage({this.record, super.key});
+
+  /// Bila diisi, halaman berfungsi sebagai form ubah (FR-604).
+  final BpRecord? record;
 
   @override
   State<BpEntryPage> createState() => _BpEntryPageState();
@@ -28,6 +32,14 @@ class _BpEntryPageState extends State<BpEntryPage> {
   @override
   void initState() {
     super.initState();
+    final record = widget.record;
+    if (record != null) {
+      _sysController.text = '${record.systolic}';
+      _diaController.text = '${record.diastolic}';
+      _pulseController.text = record.pulse == null ? '' : '${record.pulse}';
+      _noteController.text = record.note ?? '';
+      _category = classifyBp(record.systolic, record.diastolic);
+    }
     _sysController.addListener(_updateCategory);
     _diaController.addListener(_updateCategory);
   }
@@ -69,17 +81,34 @@ class _BpEntryPageState extends State<BpEntryPage> {
     });
 
     try {
-      await Services.bp.create(
-        systolic: sys,
-        diastolic: dia,
-        pulse: pulse,
-        measuredAt: DateTime.now(),
-        note: _noteController.text,
-      );
+      final record = widget.record;
+      if (record != null) {
+        await Services.bp.update(
+          id: record.id,
+          systolic: sys,
+          diastolic: dia,
+          pulse: pulse,
+          note: _noteController.text,
+        );
+      } else {
+        await Services.bp.create(
+          systolic: sys,
+          diastolic: dia,
+          pulse: pulse,
+          measuredAt: DateTime.now(),
+          note: _noteController.text,
+        );
+      }
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Tekanan darah dicatat')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              record == null
+                  ? 'Tekanan darah dicatat'
+                  : 'Catatan tekanan darah diperbarui',
+            ),
+          ),
+        );
         Navigator.of(context).pop(true);
       }
     } on Object {
@@ -94,7 +123,11 @@ class _BpEntryPageState extends State<BpEntryPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Catat tekanan darah')),
+    appBar: AppBar(
+      title: Text(
+        widget.record == null ? 'Catat tekanan darah' : 'Ubah catatan tensi',
+      ),
+    ),
     body: SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Form(

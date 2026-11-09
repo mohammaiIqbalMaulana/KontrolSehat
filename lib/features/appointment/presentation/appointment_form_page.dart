@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/di/services.dart';
+import '../../../core/utils/app_time.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/widgets/loading_button.dart';
@@ -31,13 +32,13 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
       _facilityController.text = appointment.facility;
       _doctorController.text = appointment.doctor ?? '';
       _notesController.text = appointment.notes ?? '';
-      final local = appointment.scheduledAt.toLocal();
+      final local = AppTime.toZone(appointment.scheduledAt);
       _scheduledAt = DateTime(local.year, local.month, local.day);
       _scheduledTime = TimeOfDay(hour: local.hour, minute: local.minute);
     }
   }
 
-  DateTime _scheduledAt = DateTime.now().add(const Duration(days: 7));
+  DateTime _scheduledAt = AppTime.now().add(const Duration(days: 7));
   TimeOfDay _scheduledTime = const TimeOfDay(hour: 9, minute: 0);
 
   bool _saving = false;
@@ -53,11 +54,15 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
   }
 
   Future<void> _pickDate() async {
+    final today = AppTime.now();
+    // Saat mengubah jadwal yang sudah lewat, tanggal awal tidak boleh
+    // lebih kecil dari firstDate (kalau tidak, date picker error).
+    final first = _scheduledAt.isBefore(today) ? _scheduledAt : today;
     final picked = await showDatePicker(
       context: context,
       initialDate: _scheduledAt,
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      firstDate: first,
+      lastDate: AppTime.now().add(const Duration(days: 365)),
     );
     if (picked != null && mounted) {
       setState(() => _scheduledAt = picked);
@@ -77,7 +82,7 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
-    final fullScheduled = DateTime(
+    final fullScheduled = AppTime.wall(
       _scheduledAt.year,
       _scheduledAt.month,
       _scheduledAt.day,
@@ -85,7 +90,7 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
       _scheduledTime.minute,
     );
 
-    if (widget.appointment == null && fullScheduled.isBefore(DateTime.now())) {
+    if (widget.appointment == null && fullScheduled.isBefore(AppTime.now())) {
       setState(() => _error = 'Jadwal harus di masa depan');
       return;
     }

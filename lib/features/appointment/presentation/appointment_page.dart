@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../core/di/services.dart';
+import '../../../core/utils/app_time.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/retry_view.dart';
 import '../../../core/widgets/soft_card.dart';
@@ -33,6 +34,7 @@ class _AppointmentPageState extends State<AppointmentPage> {
       _error = null;
     });
     try {
+      await Services.profiles.ensureZone();
       final list = await Services.appointments.fetchAll();
       if (!mounted) return;
       setState(() {
@@ -106,7 +108,7 @@ class _AppointmentPageState extends State<AppointmentPage> {
       itemBuilder: (context, index) {
         final a = list[index];
         final formattedDate =
-            '${Fmt.date(a.scheduledAt.toLocal())} · ${Fmt.time(a.scheduledAt.toLocal())}';
+            '${Fmt.date(AppTime.toZone(a.scheduledAt))} · ${Fmt.time(AppTime.toZone(a.scheduledAt))}';
 
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
@@ -127,8 +129,8 @@ class _AppointmentPageState extends State<AppointmentPage> {
                       Flexible(
                         child: Text(
                           Fmt.countdown(
-                            a.scheduledAt.toLocal(),
-                            DateTime.now(),
+                            AppTime.toZone(a.scheduledAt),
+                            AppTime.now(),
                           ),
                           textAlign: TextAlign.end,
                           style: TextStyle(

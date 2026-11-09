@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/di/services.dart';
+import '../../../core/utils/app_time.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/widgets/loading_button.dart';
@@ -28,7 +29,7 @@ class _MedicationFormPageState extends State<MedicationFormPage> {
   MedicineCatalogItem? _selectedCatalog;
   List<TimeOfDay> _times = <TimeOfDay>[const TimeOfDay(hour: 8, minute: 0)];
   String _preset = '1x';
-  DateTime _startDate = DateTime.now();
+  DateTime _startDate = AppTime.now();
   DateTime? _endDate;
   bool _saving = false;
   String? _error;

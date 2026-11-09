@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../core/di/services.dart';
+import '../../../core/utils/app_time.dart';
+import '../../../core/utils/bp_classifier.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/bp_status_chip.dart';
 import '../../../core/widgets/retry_view.dart';
@@ -19,6 +21,7 @@ class BpHistoryPage extends StatefulWidget {
 
 class _BpHistoryPageState extends State<BpHistoryPage> {
   int _rangeDays = 7;
+  BpCategory? _categoryFilter; // null = semua kategori (FR-605)
   List<BpRecord> _records = <BpRecord>[];
   bool _loading = true;
   String? _error;
@@ -35,9 +38,10 @@ class _BpHistoryPageState extends State<BpHistoryPage> {
       _error = null;
     });
     try {
+      await Services.profiles.ensureZone();
       final since = _rangeDays == 0
           ? null
-          : DateTime.now().subtract(Duration(days: _rangeDays));
+          : AppTime.now().subtract(Duration(days: _rangeDays));
       final list = await Services.bp.fetchHistory(since: since);
       if (!mounted) return;
       setState(() {
@@ -52,6 +56,44 @@ class _BpHistoryPageState extends State<BpHistoryPage> {
       });
     }
   }
+
+  List<BpRecord> get _visibleRecords => _categoryFilter == null
+      ? _records
+      : _records.where((r) => r.category == _categoryFilter).toList();
+
+  Future<void> _edit(BpRecord record) async {
+    final ok = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(builder: (_) => BpEntryPage(record: record)),
+    );
+    if (ok == true) await _load();
+  }
+
+  Widget _categoryChips() => SizedBox(
+    height: 48,
+    child: ListView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      children: <Widget>[
+        Padding(
+          padding: const EdgeInsets.only(right: 8),
+          child: ChoiceChip(
+            label: const Text('Semua'),
+            selected: _categoryFilter == null,
+            onSelected: (_) => setState(() => _categoryFilter = null),
+          ),
+        ),
+        for (final c in BpCategory.values)
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: ChoiceChip(
+              label: Text(c.label),
+              selected: _categoryFilter == c,
+              onSelected: (_) => setState(() => _categoryFilter = c),
+            ),
+          ),
+      ],
+    ),
+  );
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -83,20 +125,31 @@ class _BpHistoryPageState extends State<BpHistoryPage> {
             },
           ),
         ),
+        _categoryChips(),
         Expanded(
           child: _loading
               ? const Center(child: CircularProgressIndicator())
               : _error != null
               ? RetryView(message: _error!, onRetry: () => unawaited(_load()))
-              : _records.isEmpty
-              ? const Center(child: Text('Belum ada catatan tekanan darah.'))
+              : _visibleRecords.isEmpty
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(
+                      _records.isEmpty
+                          ? 'Belum ada catatan tekanan darah.'
+                          : 'Tidak ada catatan dengan kategori ini pada rentang waktu yang dipilih.',
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                )
               : RefreshIndicator(
                   onRefresh: _load,
                   child: ListView.builder(
                     padding: const EdgeInsets.fromLTRB(20, 8, 20, 96),
-                    itemCount: _records.length,
+                    itemCount: _visibleRecords.length,
                     itemBuilder: (context, index) {
-                      final r = _records[index];
+                      final r = _visibleRecords[index];
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 12),
                         child: SoftCard(
@@ -115,14 +168,20 @@ class _BpHistoryPageState extends State<BpHistoryPage> {
                                     ),
                                     if (r.pulse != null)
                                       Text(
-                                        'Nadi: ${r.pulse} bpm · ${Fmt.date(r.measuredAt.toLocal())}',
+                                        'Nadi: ${r.pulse} bpm · ${Fmt.date(AppTime.toZone(r.measuredAt))}',
                                       ),
                                     if (r.pulse == null)
-                                      Text(Fmt.date(r.measuredAt.toLocal())),
+                                      Text(Fmt.date(AppTime.toZone(r.measuredAt))),
                                   ],
                                 ),
                               ),
                               IconButton(
+                                tooltip: 'Ubah',
+                                icon: const Icon(Icons.edit_outlined),
+                                onPressed: () => _edit(r),
+                              ),
+                              IconButton(
+                                tooltip: 'Hapus',
                                 icon: const Icon(
                                   Icons.delete_outline,
                                   color: Colors.red,

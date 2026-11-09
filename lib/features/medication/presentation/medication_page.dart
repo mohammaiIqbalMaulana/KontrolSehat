@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../core/di/services.dart';
+import '../../../core/utils/app_time.dart';
 import '../../../core/utils/dose_status.dart';
+import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/loading_button.dart';
 import '../../../core/widgets/retry_view.dart';
 import '../../../core/widgets/soft_card.dart';
@@ -35,6 +37,7 @@ class _MedicationPageState extends State<MedicationPage> {
       _error = null;
     });
     try {
+      await Services.profiles.ensureZone();
       await Services.doses.ensureDoses();
       final results = await Future.wait<Object>(<Future<Object>>[
         Services.medications.fetchAll(),
@@ -58,6 +61,8 @@ class _MedicationPageState extends State<MedicationPage> {
   Future<void> _updateDose(MedicationLog dose, String status) async {
     try {
       await Services.doses.updateStatus(id: dose.id, status: status);
+      // Dosis yang sudah dicatat tidak boleh masih membunyikan pengingat.
+      await Services.notifications.reschedule();
       await _load();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -71,6 +76,33 @@ class _MedicationPageState extends State<MedicationPage> {
         );
       }
     }
+  }
+
+  Future<void> _changeDoseStatus(MedicationLog dose, DoseStatus current) async {
+    final target = current == DoseStatus.taken ? 'skipped' : 'taken';
+    final targetLabel = target == 'taken' ? 'Sudah minum' : 'Dilewati';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: const Text('Ubah catatan dosis?'),
+        content: Text(
+          '${dose.medicationName} pukul ${Fmt.time(AppTime.toZone(dose.scheduledAt))} '
+          'akan diubah menjadi "$targetLabel". Perubahan hanya bisa dilakukan '
+          'sampai pukul 23:59 hari ini.',
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(false),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(true),
+            child: const Text('Ubah'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) await _updateDose(dose, target);
   }
 
   @override
@@ -142,8 +174,8 @@ class _MedicationPageState extends State<MedicationPage> {
   Widget _doseCard(MedicationLog dose) {
     final status = evaluateDoseStatus(
       rawStatus: dose.status,
-      scheduledAt: dose.scheduledAt.toLocal(),
-      now: DateTime.now(),
+      scheduledAt: AppTime.toZone(dose.scheduledAt),
+      now: AppTime.now(),
     );
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -156,8 +188,26 @@ class _MedicationPageState extends State<MedicationPage> {
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
             Text(
-              '${dose.scheduledAt.toLocal().hour.toString().padLeft(2, '0')}:${dose.scheduledAt.toLocal().minute.toString().padLeft(2, '0')} · ${status.label}',
+              '${Fmt.time(AppTime.toZone(dose.scheduledAt))} · ${status.label}',
             ),
+            // FR-403: dosis yang sudah dicatat masih bisa diubah sampai
+            // 23:59 hari itu (server mengunci hari yang sudah lewat).
+            if (status == DoseStatus.taken ||
+                status == DoseStatus.skipped) ...<Widget>[
+              const SizedBox(height: 4),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () => _changeDoseStatus(dose, status),
+                  icon: const Icon(Icons.edit_outlined, size: 18),
+                  label: Text(
+                    status == DoseStatus.taken
+                        ? 'Ubah jadi Dilewati'
+                        : 'Ubah jadi Sudah minum',
+                  ),
+                ),
+              ),
+            ],
             if (status.canAction) ...<Widget>[
               const SizedBox(height: 8),
               Row(

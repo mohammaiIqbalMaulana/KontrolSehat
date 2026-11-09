@@ -1,5 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/utils/app_time.dart';
+
 import 'medication_models.dart';
 
 class DosesRepository {
@@ -16,18 +18,10 @@ class DosesRepository {
     );
   }
 
+  /// Dosis hari ini menurut zona waktu profil (NFR-10), bukan zona perangkat.
   Future<List<MedicationLog>> fetchToday() async {
-    final now = DateTime.now();
-    final startOfDay = DateTime(now.year, now.month, now.day, 0, 0, 0).toUtc();
-    final endOfDay = DateTime(
-      now.year,
-      now.month,
-      now.day,
-      23,
-      59,
-      59,
-      999,
-    ).toUtc();
+    final startOfDay = AppTime.startOfTodayUtc();
+    final endOfDay = AppTime.startOfTomorrowUtc();
 
     final rows = await _client
         .from('medication_logs')
@@ -35,7 +29,7 @@ class DosesRepository {
           'id, medication_id, scheduled_at, status, medications(name, dosage)',
         )
         .gte('scheduled_at', startOfDay.toIso8601String())
-        .lte('scheduled_at', endOfDay.toIso8601String())
+        .lt('scheduled_at', endOfDay.toIso8601String())
         .order('scheduled_at');
     return rows
         .whereType<Map<String, dynamic>>()

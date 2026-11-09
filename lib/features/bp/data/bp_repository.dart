@@ -35,6 +35,29 @@ class BpRepository {
     await _client.from('bp_records').delete().eq('id', id);
   }
 
+  /// Ubah catatan (FR-604). Waktu ukur tidak diubah; kategori dihitung
+  /// ulang oleh database (kolom generated).
+  Future<BpRecord> update({
+    required String id,
+    required int systolic,
+    required int diastolic,
+    required int? pulse,
+    required String? note,
+  }) async {
+    final row = await _client
+        .from('bp_records')
+        .update(<String, Object?>{
+          'systolic': systolic,
+          'diastolic': diastolic,
+          'pulse': pulse,
+          'note': note?.trim().isEmpty == true ? null : note?.trim(),
+        })
+        .eq('id', id)
+        .select(_columns)
+        .single();
+    return BpRecord.fromJson(row);
+  }
+
   Future<BpRecord> create({
     required int systolic,
     required int diastolic,

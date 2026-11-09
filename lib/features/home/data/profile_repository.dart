@@ -1,5 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/utils/app_time.dart';
+
 class Profile {
   const Profile({
     required this.id,
@@ -34,16 +36,34 @@ class ProfileRepository {
   /// RLS membatasi hasil ke baris milik pengguna sendiri.
   Future<Profile?> fetchMine() async {
     final row = await _client.from('profiles').select().maybeSingle();
-    return row == null ? null : Profile.fromJson(row);
+    if (row == null) return null;
+    final profile = Profile.fromJson(row);
+    AppTime.setZone(profile.timezone, userId: profile.id);
+    return profile;
+  }
+
+  /// Memastikan zona waktu profil sudah dimuat sebelum layar menghitung
+  /// "hari ini" atau menampilkan jam (NFR-10). Tidak mengambil ulang bila
+  /// zona untuk akun ini sudah diketahui.
+  Future<void> ensureZone() async {
+    final uid = _client.auth.currentUser?.id;
+    if (AppTime.isLoadedFor(uid)) return;
+    await fetchMine();
   }
 
   Future<void> updateMine({
     required String fullName,
     required int birthYear,
   }) async {
-    await _client.from('profiles').update(<String, Object>{
-      'full_name': fullName.trim(),
-      'birth_year': birthYear,
-    });
+    final uid = _client.auth.currentUser?.id;
+    if (uid == null) throw StateError('Belum login');
+    // Filter id wajib: Supabase menolak UPDATE tanpa WHERE.
+    await _client
+        .from('profiles')
+        .update(<String, Object>{
+          'full_name': fullName.trim(),
+          'birth_year': birthYear,
+        })
+        .eq('id', uid);
   }
 }

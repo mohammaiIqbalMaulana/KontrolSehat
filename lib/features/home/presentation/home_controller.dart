@@ -61,17 +61,17 @@ class HomeController extends ChangeNotifier {
     _error = null;
     notifyListeners();
     try {
+      // Profil dulu: zona waktunya menentukan batas "hari ini" (NFR-10).
+      _profile = await profiles.fetchMine();
       await doses.ensureDoses();
       final results = await Future.wait<Object?>([
-        profiles.fetchMine(),
         doses.fetchToday(),
         bp.fetchLatest(),
         appointments.fetchNearest(),
       ]);
-      _profile = results[0] as Profile?;
-      _todayDoses = results[1] as List<MedicationLog>;
-      _latestBp = results[2] as BpRecord?;
-      _nearestAppointment = results[3] as Appointment?;
+      _todayDoses = results[0] as List<MedicationLog>;
+      _latestBp = results[1] as BpRecord?;
+      _nearestAppointment = results[2] as Appointment?;
       await rescheduleNotifications?.call();
       _status = HomeStatus.ready;
     } on Object catch (e) {

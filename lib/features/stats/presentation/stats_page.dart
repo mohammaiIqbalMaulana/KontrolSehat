@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 
 import '../../../core/di/services.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/app_time.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/retry_view.dart';
 import '../../../core/widgets/soft_card.dart';
 import '../../bp/data/bp_model.dart';
@@ -50,18 +52,21 @@ class _StatsPageState extends State<StatsPage> {
       _error = null;
     });
     try {
+      await Services.profiles.ensureZone();
       await Services.doses.ensureDoses();
-      final now = DateTime.now();
+      final now = AppTime.now();
       final days = _tabIndex == 0 ? 0 : (_tabIndex == 1 ? 6 : 27);
+      // Tanggal kalender di zona profil (NFR-10).
       final from = DateTime(
         now.year,
         now.month,
         now.day,
       ).subtract(Duration(days: days));
+      final fromInstant = AppTime.wall(from.year, from.month, from.day);
 
       final results = await Future.wait<Object>(<Future<Object>>[
         Services.stats.fetchAdherence(from: from, to: now),
-        Services.bp.fetchHistory(since: from),
+        Services.bp.fetchHistory(since: fromInstant),
         if (_tabIndex == 0) Services.doses.fetchToday(),
       ]);
 
@@ -263,9 +268,9 @@ class _StatsPageState extends State<StatsPage> {
   Widget _buildDailyMedicationList() {
     if (_todayDoses.isEmpty) {
       return const SoftCard(
-        child: Padding(
-          padding: EdgeInsets.all(12),
-          child: Text('Belum ada jadwal obat hari ini.'),
+        child: EmptyState(
+          icon: Icons.medication_outlined,
+          message: 'Belum ada jadwal obat hari ini.',
         ),
       );
     }
@@ -299,7 +304,7 @@ class _StatsPageState extends State<StatsPage> {
                   ),
                 ),
                 Text(
-                  '${Fmt.time(dose.scheduledAt.toLocal())} · $statusLabel',
+                  '${Fmt.time(AppTime.toZone(dose.scheduledAt))} · $statusLabel',
                   style: TextStyle(fontSize: 12, color: statusColor),
                 ),
               ],
@@ -313,9 +318,9 @@ class _StatsPageState extends State<StatsPage> {
   Widget _buildBarChartCard() {
     if (_adherence.isEmpty) {
       return const SoftCard(
-        child: SizedBox(
-          height: 160,
-          child: Center(child: Text('Belum ada data kepatuhan.')),
+        child: EmptyState(
+          icon: Icons.bar_chart_outlined,
+          message: 'Belum ada data kepatuhan.',
         ),
       );
     }
@@ -411,12 +416,12 @@ class _StatsPageState extends State<StatsPage> {
   List<_DailyBpPoint> _groupBpByDay(List<BpRecord> records) {
     final grouped = <String, List<BpRecord>>{};
     for (final record in records) {
-      final local = record.measuredAt.toLocal();
+      final local = AppTime.toZone(record.measuredAt);
       final key = '${local.year}-${local.month}-${local.day}';
       grouped.putIfAbsent(key, () => <BpRecord>[]).add(record);
     }
     return grouped.values.map((dayRecords) {
-      final day = dayRecords.first.measuredAt.toLocal();
+      final day = AppTime.toZone(dayRecords.first.measuredAt);
       final systolic = dayRecords.fold<int>(0, (sum, r) => sum + r.systolic);
       final diastolic = dayRecords.fold<int>(0, (sum, r) => sum + r.diastolic);
       return _DailyBpPoint(
@@ -431,9 +436,9 @@ class _StatsPageState extends State<StatsPage> {
   Widget _buildBpLineChartCard() {
     if (_bpRecords.isEmpty) {
       return const SoftCard(
-        child: SizedBox(
-          height: 160,
-          child: Center(child: Text('Belum ada catatan tekanan darah.')),
+        child: EmptyState(
+          icon: Icons.favorite_outline,
+          message: 'Belum ada catatan tekanan darah.',
         ),
       );
     }
