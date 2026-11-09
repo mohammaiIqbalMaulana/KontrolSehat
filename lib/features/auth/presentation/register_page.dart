@@ -7,6 +7,7 @@ import '../../../core/widgets/app_background.dart';
 import '../../../core/widgets/loading_button.dart';
 import '../../../core/widgets/responsive_center.dart';
 import '../../../core/widgets/soft_card.dart';
+import '../../shell/presentation/main_shell.dart';
 import 'auth_controller.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -43,9 +44,12 @@ class _RegisterPageState extends State<RegisterPage> {
       birthYear: int.parse(_birthYear.text.trim()),
       timezone: DeviceTimezone.detect(),
     );
-    // Berhasil: sesi aktif dan AuthGate menampilkan Beranda. Tutup halaman
-    // ini agar tumpukan navigasi bersih.
-    if (ok && mounted) Navigator.of(context).popUntil((r) => r.isFirst);
+    if (ok && mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute<void>(builder: (_) => const MainShell()),
+        (route) => false,
+      );
+    }
   }
 
   @override
@@ -102,8 +106,9 @@ class _RegisterPageState extends State<RegisterPage> {
                                 controller: _email,
                                 keyboardType: TextInputType.emailAddress,
                                 textInputAction: TextInputAction.next,
-                                decoration:
-                                    const InputDecoration(labelText: 'Email'),
+                                decoration: const InputDecoration(
+                                  labelText: 'Email',
+                                ),
                                 validator: Validators.email,
                                 onChanged: (_) => _controller.clearError(),
                               ),
@@ -114,8 +119,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                 textInputAction: TextInputAction.done,
                                 decoration: const InputDecoration(
                                   labelText: 'Password',
-                                  helperText:
-                                      'Minimal 8 karakter, memuat huruf dan angka',
+                                  helperText: 'Minimal 8 karakter, memuat huruf dan angka',
                                 ),
                                 validator: Validators.passwordRegister,
                                 onFieldSubmitted: (_) => _submit(),

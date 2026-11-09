@@ -13,7 +13,6 @@ env.*.json
 secrets.json
 secrets.*.json
 config.local.*
-supabase/
 
 # Contoh konfigurasi tanpa kunci boleh di-commit
 !env.example.json

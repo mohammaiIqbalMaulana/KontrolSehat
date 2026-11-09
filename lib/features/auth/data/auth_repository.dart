@@ -21,16 +21,19 @@ class AuthRepository {
     required String fullName,
     required int birthYear,
     required String timezone,
-  }) =>
-      _client.auth.signUp(
-        email: email.trim(),
-        password: password,
-        data: <String, Object>{
-          'full_name': fullName.trim(),
-          'birth_year': birthYear,
-          'timezone': timezone,
-        },
-      );
+  }) => _client.auth.signUp(
+    email: email.trim(),
+    password: password,
+    data: <String, Object>{
+      'full_name': fullName.trim(),
+      'birth_year': birthYear,
+      'timezone': timezone,
+    },
+  );
 
   Future<void> signOut() => _client.auth.signOut();
+
+  Future<void> deleteAccount() async {
+    await _client.rpc<Object?>('delete_my_account');
+  }
 }

@@ -6,8 +6,10 @@ void main() {
 
   group('countdown (PRD 8.6)', () {
     test('hari ini', () {
-      expect(Fmt.countdown(DateTime(2026, 11, 8, 14, 30), now),
-          'Hari ini, 14:30');
+      expect(
+        Fmt.countdown(DateTime(2026, 11, 8, 14, 30), now),
+        'Hari ini, 14:30',
+      );
     });
     test('besok', () {
       expect(Fmt.countdown(DateTime(2026, 11, 9, 9), now), 'Besok, 09:00');
@@ -21,8 +23,7 @@ void main() {
     });
     test('selisih dihitung per tanggal kalender, bukan per 24 jam', () {
       final late = DateTime(2026, 11, 8, 23, 50);
-      expect(Fmt.countdown(DateTime(2026, 11, 9, 0, 10), late),
-          'Besok, 00:10');
+      expect(Fmt.countdown(DateTime(2026, 11, 9, 0, 10), late), 'Besok, 00:10');
     });
   });
 

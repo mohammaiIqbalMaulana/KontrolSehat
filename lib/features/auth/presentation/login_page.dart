@@ -6,6 +6,7 @@ import '../../../core/widgets/app_background.dart';
 import '../../../core/widgets/loading_button.dart';
 import '../../../core/widgets/responsive_center.dart';
 import '../../../core/widgets/soft_card.dart';
+import '../../shell/presentation/main_shell.dart';
 import 'auth_controller.dart';
 import 'register_page.dart';
 
@@ -32,8 +33,13 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
-    // Berhasil: AuthGate otomatis memindahkan ke Beranda.
-    await _controller.signIn(_email.text, _password.text);
+    final ok = await _controller.signIn(_email.text, _password.text);
+    if (ok && mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute<void>(builder: (_) => const MainShell()),
+        (route) => false,
+      );
+    }
   }
 
   @override
@@ -66,8 +72,9 @@ class _LoginPageState extends State<LoginPage> {
                                 controller: _email,
                                 keyboardType: TextInputType.emailAddress,
                                 textInputAction: TextInputAction.next,
-                                decoration:
-                                    const InputDecoration(labelText: 'Email'),
+                                decoration: const InputDecoration(
+                                  labelText: 'Email',
+                                ),
                                 validator: Validators.email,
                                 onChanged: (_) => _controller.clearError(),
                               ),

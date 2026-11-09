@@ -18,9 +18,11 @@ abstract final class Fmt {
   /// Hitung mundur kontrol (PRD 8.6). [scheduled] dan [now] harus sudah
   /// dalam zona waktu yang sama (zona profil pengguna).
   static String countdown(DateTime scheduled, DateTime now) {
-    final days = DateTime(scheduled.year, scheduled.month, scheduled.day)
-        .difference(DateTime(now.year, now.month, now.day))
-        .inDays;
+    final days = DateTime(
+      scheduled.year,
+      scheduled.month,
+      scheduled.day,
+    ).difference(DateTime(now.year, now.month, now.day)).inDays;
     if (days == 0) return 'Hari ini, ${time(scheduled)}';
     if (days == 1) return 'Besok, ${time(scheduled)}';
     if (days >= 2 && days <= 30) return '$days hari lagi';

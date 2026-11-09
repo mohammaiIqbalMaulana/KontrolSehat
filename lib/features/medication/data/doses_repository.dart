@@ -1,5 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'medication_models.dart';
+
 class DosesRepository {
   DosesRepository(this._client);
 
@@ -12,5 +14,47 @@ class DosesRepository {
       'ensure_doses',
       params: <String, Object>{'p_days_ahead': daysAhead},
     );
+  }
+
+  Future<List<MedicationLog>> fetchToday() async {
+    final now = DateTime.now();
+    final startOfDay = DateTime(now.year, now.month, now.day, 0, 0, 0).toUtc();
+    final endOfDay = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      23,
+      59,
+      59,
+      999,
+    ).toUtc();
+
+    final rows = await _client
+        .from('medication_logs')
+        .select(
+          'id, medication_id, scheduled_at, status, medications(name, dosage)',
+        )
+        .gte('scheduled_at', startOfDay.toIso8601String())
+        .lte('scheduled_at', endOfDay.toIso8601String())
+        .order('scheduled_at');
+    return rows
+        .whereType<Map<String, dynamic>>()
+        .map(MedicationLog.fromJson)
+        .toList();
+  }
+
+  Future<MedicationLog> updateStatus({
+    required String id,
+    required String status,
+  }) async {
+    final row = await _client
+        .from('medication_logs')
+        .update(<String, Object>{'status': status})
+        .eq('id', id)
+        .select(
+          'id, medication_id, scheduled_at, status, medications(name, dosage)',
+        )
+        .single();
+    return MedicationLog.fromJson(row);
   }
 }

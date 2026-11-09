@@ -31,7 +31,8 @@ abstract final class Validators {
   /// Registrasi: minimal 8 karakter, memuat huruf dan angka.
   static String? passwordRegister(String? v) {
     final s = v ?? '';
-    final ok = s.length >= 8 &&
+    final ok =
+        s.length >= 8 &&
         RegExp('[A-Za-z]').hasMatch(s) &&
         RegExp('[0-9]').hasMatch(s);
     return ok
@@ -60,8 +61,7 @@ abstract final class Validators {
   static String? facility(String? v) =>
       _length(v, 2, 80, 'Nama fasilitas harus 2 sampai 80 karakter');
 
-  static String? doctor(String? v) =>
-      _length(v, 0, 60, 'Maksimal 60 karakter');
+  static String? doctor(String? v) => _length(v, 0, 60, 'Maksimal 60 karakter');
 
   // ---------- 10.4 Tekanan darah
   static String? systolic(String? v) =>

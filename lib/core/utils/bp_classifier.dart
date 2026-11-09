@@ -17,17 +17,12 @@ enum BpCategory {
       BpCategory.values.firstWhere((c) => c.dbValue == value);
 
   String get advice => switch (this) {
-        BpCategory.normal =>
-          'Tekanan darah dalam rentang normal. Lanjutkan pola hidup sehat dan minum obat sesuai anjuran dokter.',
-        BpCategory.elevated =>
-          'Sedikit di atas normal. Ukur lagi secara teratur dan jaga pola hidup sehat.',
-        BpCategory.high =>
-          'Tekanan darah tinggi. Pastikan obat diminum sesuai resep dan konsultasikan ke tenaga kesehatan.',
-        BpCategory.veryHigh =>
-          'Sangat tinggi. Duduk tenang dan ukur ulang setelah 5 menit. Bila tetap tinggi atau muncul nyeri dada, sesak, sakit kepala berat, atau lemah pada satu sisi tubuh, segera ke fasilitas kesehatan atau IGD.',
-        BpCategory.low =>
-          'Lebih rendah dari batas umum. Bila pusing atau lemas, duduk atau berbaring dan hubungi tenaga kesehatan.',
-      };
+    BpCategory.normal => 'Tekanan darah dalam rentang normal. Lanjutkan pola hidup sehat dan minum obat sesuai anjuran dokter.',
+    BpCategory.elevated => 'Sedikit di atas normal. Ukur lagi secara teratur dan jaga pola hidup sehat.',
+    BpCategory.high => 'Tekanan darah tinggi. Pastikan obat diminum sesuai resep dan konsultasikan ke tenaga kesehatan.',
+    BpCategory.veryHigh => 'Sangat tinggi. Duduk tenang dan ukur ulang setelah 5 menit. Bila tetap tinggi atau muncul nyeri dada, sesak, sakit kepala berat, atau lemah pada satu sisi tubuh, segera ke fasilitas kesehatan atau IGD.',
+    BpCategory.low => 'Lebih rendah dari batas umum. Bila pusing atau lemas, duduk atau berbaring dan hubungi tenaga kesehatan.',
+  };
 }
 
 BpCategory classifyBp(int systolic, int diastolic) {

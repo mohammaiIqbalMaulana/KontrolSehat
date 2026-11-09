@@ -24,16 +24,15 @@ class AuthController extends ChangeNotifier {
     required String fullName,
     required int birthYear,
     required String timezone,
-  }) =>
-      _run(
-        () => _repo.signUp(
-          email: email,
-          password: password,
-          fullName: fullName,
-          birthYear: birthYear,
-          timezone: timezone,
-        ),
-      );
+  }) => _run(
+    () => _repo.signUp(
+      email: email,
+      password: password,
+      fullName: fullName,
+      birthYear: birthYear,
+      timezone: timezone,
+    ),
+  );
 
   void clearError() {
     if (_error == null) return;
