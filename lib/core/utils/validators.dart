@@ -35,9 +35,7 @@ abstract final class Validators {
         s.length >= 8 &&
         RegExp('[A-Za-z]').hasMatch(s) &&
         RegExp('[0-9]').hasMatch(s);
-    return ok
-        ? null
-        : 'Password minimal 8 karakter ada huruf & angka';
+    return ok ? null : 'Password tidak valid';
   }
 
   /// Login: hanya wajib diisi.
