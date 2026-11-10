@@ -384,8 +384,7 @@ class _StatsPageState extends State<StatsPage> {
                       if (isMonthly) {
                         final b = monthlyBlocks[groupIndex];
                         title =
-                            'Minggu ${groupIndex + 1} · '
-                            '${_shortDate(b.start)}–${_shortDate(b.end)}';
+                            '${_shortDate(b.start)} – ${_shortDate(b.end)}';
                         due = b.due;
                         taken = b.taken;
                       } else {
@@ -460,8 +459,10 @@ class _StatsPageState extends State<StatsPage> {
                         if (idx < 0 || idx >= itemCount) {
                           return const SizedBox.shrink();
                         }
+                        // Bulanan: label = tanggal awal blok 7 hari, bukan
+                        // "M1..M4" yang terbaca seperti minggu ke-N bulan ini.
                         final label = isMonthly
-                            ? monthlyBlocks[idx].label
+                            ? _shortDate(monthlyBlocks[idx].start)
                             : _dayNames[_adherence[idx].day.weekday - 1];
                         return Padding(
                           padding: const EdgeInsets.only(top: 6),
@@ -503,6 +504,14 @@ class _StatsPageState extends State<StatsPage> {
               ),
             ),
           ),
+          if (isMonthly) ...<Widget>[
+            const SizedBox(height: 8),
+            Text(
+              'Tiap batang = 7 hari berurutan, dimulai dari tanggal di '
+              'bawahnya. Batang paling kanan = 7 hari terakhir.',
+              style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+            ),
+          ],
         ],
       ),
     );
@@ -558,7 +567,8 @@ class _StatsPageState extends State<StatsPage> {
     final spanDays = daily.last.day.difference(firstDay).inDays;
     final maxX = spanDays < 1 ? 1.0 : spanDays.toDouble();
     final step = (maxX / 4).ceil();
-    final xInterval = (step < 1 ? 1 : step).toDouble();
+    final xStep = step < 1 ? 1 : step;
+    final xInterval = xStep.toDouble();
 
     final sysSpots = <FlSpot>[];
     final diaSpots = <FlSpot>[];
@@ -570,12 +580,13 @@ class _StatsPageState extends State<StatsPage> {
       diaSpots.add(FlSpot(x.toDouble(), p.diastolic));
     }
 
-    // Rentang Y menyesuaikan data, minimal 40–200.
+    // Rentang Y menyesuaikan data, minimal 40–200, kelipatan 40 agar label
+    // sumbu rapi (40, 80, 120, ...).
     var minY = 40.0;
     var maxY = 200.0;
     for (final p in daily) {
-      final lo = ((p.diastolic - 10) / 20).floorToDouble() * 20;
-      final hi = ((p.systolic + 10) / 20).ceilToDouble() * 20;
+      final lo = ((p.diastolic - 10) / 40).floorToDouble() * 40;
+      final hi = ((p.systolic + 10) / 40).ceilToDouble() * 40;
       if (lo < minY) minY = lo;
       if (hi > maxY) maxY = hi;
     }
@@ -689,7 +700,7 @@ class _StatsPageState extends State<StatsPage> {
                               const TextSpan(
                                 text: '\n● ',
                                 style: TextStyle(
-                                  color: diaColor,
+                                  color: AppColors.accent,
                                   fontSize: 11,
                                 ),
                               ),
@@ -738,12 +749,17 @@ class _StatsPageState extends State<StatsPage> {
                         showTitles: true,
                         reservedSize: 28,
                         interval: xInterval,
-                        maxIncluded: false,
                         getTitlesWidget: (val, meta) {
                           final offset = val.round();
                           if ((val - offset).abs() > 0.001 ||
                               offset < 0 ||
                               offset > spanDays) {
+                            return const SizedBox.shrink();
+                          }
+                          // Titik terakhir tetap diberi label, kecuali terlalu
+                          // dekat dengan label sebelumnya (hindari tumpang tindih).
+                          final rest = offset % xStep;
+                          if (rest != 0 && rest < xStep * 0.6) {
                             return const SizedBox.shrink();
                           }
                           final d = firstDay.add(Duration(days: offset));
