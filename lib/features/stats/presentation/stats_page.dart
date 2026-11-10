@@ -104,7 +104,16 @@ class _StatsPageState extends State<StatsPage> {
       final blockTaken = chunk.fold<int>(0, (sum, d) => sum + d.taken);
       final pct = blockDue == 0 ? 0 : (blockTaken * 100 / blockDue).round();
 
-      blocks.add(_MonthlyBlock(label: 'M${i + 1}', percent: pct));
+      blocks.add(
+        _MonthlyBlock(
+          label: 'M${i + 1}',
+          percent: pct,
+          due: blockDue,
+          taken: blockTaken,
+          start: chunk.first.day,
+          end: chunk.last.day,
+        ),
+      );
     }
     return blocks;
   }
@@ -167,11 +176,13 @@ class _StatsPageState extends State<StatsPage> {
                                     const SizedBox(height: 4),
                                     Text(
                                       adherenceLabel,
-                                      style: const TextStyle(
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.w700,
-                                        color: AppColors.primary,
-                                      ),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .headlineSmall
+                                          ?.copyWith(
+                                            fontSize: 24,
+                                            fontWeight: FontWeight.w700,
+                                          ),
                                     ),
                                     Text(
                                       '$totalTaken dari $totalDue jatuh tempo',
@@ -315,6 +326,13 @@ class _StatsPageState extends State<StatsPage> {
     );
   }
 
+  static const List<String> _monthNames = <String>[
+    'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', //
+    'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des',
+  ];
+
+  String _shortDate(DateTime d) => '${d.day} ${_monthNames[d.month - 1]}';
+
   Widget _buildBarChartCard() {
     if (_adherence.isEmpty) {
       return const SoftCard(
@@ -325,11 +343,13 @@ class _StatsPageState extends State<StatsPage> {
       );
     }
 
+    final scheme = Theme.of(context).colorScheme;
     final isMonthly = _tabIndex == 2;
     final monthlyBlocks = isMonthly
         ? _calculateMonthlyBlocks()
         : <_MonthlyBlock>[];
     final itemCount = isMonthly ? monthlyBlocks.length : _adherence.length;
+    final tooltipText = scheme.onInverseSurface;
 
     return SoftCard(
       child: Column(
@@ -343,6 +363,74 @@ class _StatsPageState extends State<StatsPage> {
                 minY: 0,
                 gridData: const FlGridData(show: false),
                 borderData: FlBorderData(show: false),
+                barTouchData: BarTouchData(
+                  enabled: true,
+                  touchTooltipData: BarTouchTooltipData(
+                    // Latar & teks tooltip mengikuti tema agar selalu terbaca.
+                    getTooltipColor: (_) => scheme.inverseSurface,
+                    tooltipBorderRadius: BorderRadius.circular(10),
+                    tooltipPadding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    tooltipMargin: 6,
+                    maxContentWidth: 170,
+                    fitInsideHorizontally: true,
+                    fitInsideVertically: true,
+                    getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                      final String title;
+                      final int due;
+                      final int taken;
+                      if (isMonthly) {
+                        final b = monthlyBlocks[groupIndex];
+                        title =
+                            'Minggu ${groupIndex + 1} · '
+                            '${_shortDate(b.start)}–${_shortDate(b.end)}';
+                        due = b.due;
+                        taken = b.taken;
+                      } else {
+                        final a = _adherence[groupIndex];
+                        title =
+                            '${_dayNames[a.day.weekday - 1]}, '
+                            '${_shortDate(a.day)}';
+                        due = a.due;
+                        taken = a.taken;
+                      }
+                      final valueLabel = due == 0
+                          ? '–'
+                          : Fmt.adherenceLabel(taken: taken, due: due);
+                      final detail = due == 0
+                          ? 'Tidak ada dosis jatuh tempo'
+                          : '$taken dari $due dosis';
+                      return BarTooltipItem(
+                        '$title\n',
+                        TextStyle(
+                          color: tooltipText.withValues(alpha: 0.85),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        children: <TextSpan>[
+                          TextSpan(
+                            text: valueLabel,
+                            style: TextStyle(
+                              color: tooltipText,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          TextSpan(
+                            text: '\n$detail',
+                            style: TextStyle(
+                              color: tooltipText.withValues(alpha: 0.85),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
                 titlesData: FlTitlesData(
                   topTitles: const AxisTitles(
                     sideTitles: SideTitles(showTitles: false),
@@ -353,13 +441,13 @@ class _StatsPageState extends State<StatsPage> {
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      reservedSize: 32,
+                      reservedSize: 36,
                       interval: 50,
                       getTitlesWidget: (val, meta) => Text(
                         '${val.toInt()}%',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 10,
-                          color: Colors.grey,
+                          color: scheme.onSurfaceVariant,
                         ),
                       ),
                     ),
@@ -379,9 +467,10 @@ class _StatsPageState extends State<StatsPage> {
                           padding: const EdgeInsets.only(top: 6),
                           child: Text(
                             label,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
+                              color: scheme.onSurfaceVariant,
                             ),
                           ),
                         );
@@ -398,9 +487,15 @@ class _StatsPageState extends State<StatsPage> {
                     barRods: <BarChartRodData>[
                       BarChartRodData(
                         toY: pct,
-                        color: AppColors.primary,
+                        // scheme.primary: ungu terang di tema gelap.
+                        color: scheme.primary,
                         width: isMonthly ? 28 : 16,
                         borderRadius: BorderRadius.circular(6),
+                        backDrawRodData: BackgroundBarChartRodData(
+                          show: true,
+                          toY: 100,
+                          color: scheme.onSurface.withValues(alpha: 0.07),
+                        ),
                       ),
                     ],
                   );
@@ -421,7 +516,9 @@ class _StatsPageState extends State<StatsPage> {
       grouped.putIfAbsent(key, () => <BpRecord>[]).add(record);
     }
     return grouped.values.map((dayRecords) {
-      final day = AppTime.toZone(dayRecords.first.measuredAt);
+      final local = AppTime.toZone(dayRecords.first.measuredAt);
+      // Tanggal kalender murni (UTC) agar selisih hari tidak terpengaruh DST.
+      final day = DateTime.utc(local.year, local.month, local.day);
       final systolic = dayRecords.fold<int>(0, (sum, r) => sum + r.systolic);
       final diastolic = dayRecords.fold<int>(0, (sum, r) => sum + r.diastolic);
       return _DailyBpPoint(
@@ -443,135 +540,246 @@ class _StatsPageState extends State<StatsPage> {
       );
     }
 
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    // Merah tua hampir tak terlihat di latar gelap: pakai warna error tema.
+    final sysColor = isDark ? scheme.error : AppColors.danger;
+    const diaColor = AppColors.accent;
+    final tooltipText = scheme.onInverseSurface;
+
     // Urutkan kronologis untuk grafik garis
     final sorted = List<BpRecord>.from(_bpRecords)
       ..sort((a, b) => a.measuredAt.compareTo(b.measuredAt));
     final daily = _groupBpByDay(sorted);
 
+    // Sumbu X berbasis tanggal (bukan urutan data) supaya jarak antar titik
+    // sesuai selisih hari, dan label dijarangkan agar tidak bertumpuk.
+    final firstDay = daily.first.day;
+    final spanDays = daily.last.day.difference(firstDay).inDays;
+    final maxX = spanDays < 1 ? 1.0 : spanDays.toDouble();
+    final step = (maxX / 4).ceil();
+    final xInterval = (step < 1 ? 1 : step).toDouble();
+
     final sysSpots = <FlSpot>[];
     final diaSpots = <FlSpot>[];
-
-    for (var i = 0; i < daily.length; i++) {
-      sysSpots.add(FlSpot(i.toDouble(), daily[i].systolic));
-      diaSpots.add(FlSpot(i.toDouble(), daily[i].diastolic));
+    final byOffset = <int, _DailyBpPoint>{};
+    for (final p in daily) {
+      final x = p.day.difference(firstDay).inDays;
+      byOffset[x] = p;
+      sysSpots.add(FlSpot(x.toDouble(), p.systolic));
+      diaSpots.add(FlSpot(x.toDouble(), p.diastolic));
     }
+
+    // Rentang Y menyesuaikan data, minimal 40–200.
+    var minY = 40.0;
+    var maxY = 200.0;
+    for (final p in daily) {
+      final lo = ((p.diastolic - 10) / 20).floorToDouble() * 20;
+      final hi = ((p.systolic + 10) / 20).ceilToDouble() * 20;
+      if (lo < minY) minY = lo;
+      if (hi > maxY) maxY = hi;
+    }
+
+    Widget legend(Color color, String text) => Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 6),
+        Text(text, style: const TextStyle(fontSize: 11)),
+      ],
+    );
 
     return SoftCard(
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           const Text(
             'Rata-rata tekanan darah per hari',
             style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            spacing: 16,
+            runSpacing: 4,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: <Widget>[
-              Row(
-                children: <Widget>[
-                  Container(width: 12, height: 4, color: AppColors.danger),
-                  const SizedBox(width: 4),
-                  const Text('Sistolik', style: TextStyle(fontSize: 11)),
-                ],
-              ),
-              Row(
-                children: <Widget>[
-                  Container(width: 12, height: 4, color: AppColors.accent),
-                  const SizedBox(width: 4),
-                  const Text('Diastolik', style: TextStyle(fontSize: 11)),
-                ],
-              ),
+              legend(sysColor, 'Sistolik'),
+              legend(diaColor, 'Diastolik'),
               Text(
                 '${daily.length} hari data',
-                style: const TextStyle(fontSize: 11),
+                style: TextStyle(
+                  fontSize: 11,
+                  color: scheme.onSurfaceVariant,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           SizedBox(
-            height: 180,
-            child: LineChart(
-              LineChartData(
-                minY: 40,
-                maxY: 200,
-                gridData: const FlGridData(show: true, drawVerticalLine: false),
-                borderData: FlBorderData(show: false),
-                lineTouchData: LineTouchData(
-                  handleBuiltInTouches: true,
-                  touchTooltipData: LineTouchTooltipData(
-                    getTooltipItems: (spots) => spots.map((spot) {
-                      final point = daily[spot.x.toInt()];
-                      final series = spot.barIndex == 0
-                          ? 'Sistolik'
-                          : 'Diastolik';
-                      return LineTooltipItem(
-                        '${point.day.day}/${point.day.month} · $series\\n${spot.y.toStringAsFixed(0)} mmHg',
-                        const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-                titlesData: FlTitlesData(
-                  topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 32,
-                      interval: 40,
-                      getTitlesWidget: (val, meta) => Text(
-                        '${val.toInt()}',
-                        style: const TextStyle(
-                          fontSize: 10,
-                          color: Colors.grey,
-                        ),
-                      ),
+            height: 200,
+            child: Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: LineChart(
+                LineChartData(
+                  minX: 0,
+                  maxX: maxX,
+                  minY: minY,
+                  maxY: maxY,
+                  gridData: FlGridData(
+                    drawVerticalLine: false,
+                    horizontalInterval: 40,
+                    getDrawingHorizontalLine: (_) => FlLine(
+                      color: scheme.outline.withValues(alpha: 0.25),
+                      strokeWidth: 1,
                     ),
                   ),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      getTitlesWidget: (val, meta) {
-                        final idx = val.toInt();
-                        if (idx < 0 || idx >= daily.length) {
-                          return const SizedBox.shrink();
-                        }
-                        final point = daily[idx];
-                        final label = '${point.day.day}/${point.day.month}';
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 6),
-                          child: Text(
-                            label,
-                            style: const TextStyle(fontSize: 10),
-                          ),
-                        );
+                  borderData: FlBorderData(show: false),
+                  lineTouchData: LineTouchData(
+                    handleBuiltInTouches: true,
+                    touchSpotThreshold: 24,
+                    touchTooltipData: LineTouchTooltipData(
+                      getTooltipColor: (_) => scheme.inverseSurface,
+                      tooltipBorderRadius: BorderRadius.circular(10),
+                      tooltipPadding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 8,
+                      ),
+                      maxContentWidth: 190,
+                      fitInsideHorizontally: true,
+                      fitInsideVertically: true,
+                      getTooltipItems: (spots) {
+                        if (spots.isEmpty) return <LineTooltipItem?>[];
+                        final point = byOffset[spots.first.x.round()];
+                        // Satu tooltip gabungan; item lain dikosongkan.
+                        return List<LineTooltipItem?>.generate(spots.length, (
+                          i,
+                        ) {
+                          if (i != 0 || point == null) return null;
+                          final d = point.day;
+                          final dim = tooltipText.withValues(alpha: 0.85);
+                          return LineTooltipItem(
+                            '${_dayNames[d.weekday - 1]}, ${_shortDate(d)}',
+                            TextStyle(
+                              color: tooltipText,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                            textAlign: TextAlign.left,
+                            children: <TextSpan>[
+                              TextSpan(
+                                text: '\n● ',
+                                style: TextStyle(
+                                  color: sysColor,
+                                  fontSize: 11,
+                                ),
+                              ),
+                              TextSpan(
+                                text:
+                                    'Sistolik ${point.systolic.round()} mmHg',
+                                style: TextStyle(
+                                  color: tooltipText,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const TextSpan(
+                                text: '\n● ',
+                                style: TextStyle(
+                                  color: diaColor,
+                                  fontSize: 11,
+                                ),
+                              ),
+                              TextSpan(
+                                text:
+                                    'Diastolik ${point.diastolic.round()} mmHg',
+                                style: TextStyle(
+                                  color: tooltipText,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              TextSpan(
+                                text: '\n${point.count} pengukuran',
+                                style: TextStyle(color: dim, fontSize: 10),
+                              ),
+                            ],
+                          );
+                        });
                       },
                     ),
                   ),
+                  titlesData: FlTitlesData(
+                    topTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    rightTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 34,
+                        interval: 40,
+                        getTitlesWidget: (val, meta) => Text(
+                          '${val.toInt()}',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 28,
+                        interval: xInterval,
+                        maxIncluded: false,
+                        getTitlesWidget: (val, meta) {
+                          final offset = val.round();
+                          if ((val - offset).abs() > 0.001 ||
+                              offset < 0 ||
+                              offset > spanDays) {
+                            return const SizedBox.shrink();
+                          }
+                          final d = firstDay.add(Duration(days: offset));
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              _shortDate(d),
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  lineBarsData: <LineChartBarData>[
+                    LineChartBarData(
+                      spots: sysSpots,
+                      isCurved: true,
+                      preventCurveOverShooting: true,
+                      color: sysColor,
+                      barWidth: 3,
+                      dotData: const FlDotData(show: true),
+                    ),
+                    LineChartBarData(
+                      spots: diaSpots,
+                      isCurved: true,
+                      preventCurveOverShooting: true,
+                      color: diaColor,
+                      barWidth: 3,
+                      dotData: const FlDotData(show: true),
+                    ),
+                  ],
                 ),
-                lineBarsData: <LineChartBarData>[
-                  LineChartBarData(
-                    spots: sysSpots,
-                    isCurved: true,
-                    color: AppColors.danger,
-                    barWidth: 3,
-                    dotData: const FlDotData(show: true),
-                  ),
-                  LineChartBarData(
-                    spots: diaSpots,
-                    isCurved: true,
-                    color: AppColors.accent,
-                    barWidth: 3,
-                    dotData: const FlDotData(show: true),
-                  ),
-                ],
               ),
             ),
           ),
@@ -646,7 +854,18 @@ class _PeriodSelector extends StatelessWidget {
 }
 
 class _MonthlyBlock {
-  const _MonthlyBlock({required this.label, required this.percent});
+  const _MonthlyBlock({
+    required this.label,
+    required this.percent,
+    required this.due,
+    required this.taken,
+    required this.start,
+    required this.end,
+  });
   final String label;
   final int percent;
+  final int due;
+  final int taken;
+  final DateTime start;
+  final DateTime end;
 }
