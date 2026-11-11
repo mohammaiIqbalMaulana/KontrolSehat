@@ -244,55 +244,16 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _showEditProfile(String currentName, int currentYear) {
-    final formKey = GlobalKey<FormState>();
-    final name = TextEditingController(text: currentName);
-    final birthYear = TextEditingController(text: '$currentYear');
-    showDialog<void>(
+    // Controller dimiliki State dialog (bukan dibuang lewat whenComplete),
+    // supaya baru dibuang setelah animasi tutup dialog selesai.
+    showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Ubah profil'),
-        content: Form(
-          key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              TextFormField(
-                controller: name,
-                decoration: const InputDecoration(labelText: 'Nama lengkap'),
-                validator: Validators.fullName,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: birthYear,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Tahun lahir'),
-                validator: Validators.birthYear,
-              ),
-            ],
-          ),
-        ),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Batal'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              if (!(formKey.currentState?.validate() ?? false)) return;
-              await Services.profiles.updateMine(
-                fullName: name.text,
-                birthYear: int.parse(birthYear.text.trim()),
-              );
-              if (dialogContext.mounted) Navigator.of(dialogContext).pop();
-              if (mounted) setState(() {});
-            },
-            child: const Text('Simpan'),
-          ),
-        ],
+      builder: (_) => _EditProfileDialog(
+        initialName: currentName,
+        initialBirthYear: currentYear,
       ),
-    ).whenComplete(() {
-      name.dispose();
-      birthYear.dispose();
+    ).then((saved) {
+      if (saved == true && mounted) setState(() {});
     });
   }
 
@@ -417,46 +378,165 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _showDeleteDialog() {
-    final controller = TextEditingController();
     final navigator = Navigator.of(context);
-    showDialog<void>(
+    showDialog<bool>(
       context: context,
-      builder: (dialogCtx) => AlertDialog(
-        title: const Text('Hapus akun'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            const Text(
-              'Ketik "HAPUS" untuk menghapus seluruh akun dan data secara permanen.',
-            ),
+      builder: (_) => const _DeleteAccountDialog(),
+    ).then((confirmed) async {
+      if (confirmed != true) return;
+      await Services.auth.deleteAccount();
+      await NotificationService.instance.cancelAll();
+      await Services.auth.signOut();
+      if (mounted) {
+        navigator.popUntil((route) => route.isFirst);
+      }
+    });
+  }
+}
+
+class _EditProfileDialog extends StatefulWidget {
+  const _EditProfileDialog({
+    required this.initialName,
+    required this.initialBirthYear,
+  });
+
+  final String initialName;
+  final int initialBirthYear;
+
+  @override
+  State<_EditProfileDialog> createState() => _EditProfileDialogState();
+}
+
+class _EditProfileDialogState extends State<_EditProfileDialog> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  late final TextEditingController _name = TextEditingController(
+    text: widget.initialName,
+  );
+  late final TextEditingController _birthYear = TextEditingController(
+    text: '${widget.initialBirthYear}',
+  );
+  bool _saving = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _birthYear.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      await Services.profiles.updateMine(
+        fullName: _name.text,
+        birthYear: int.parse(_birthYear.text.trim()),
+      );
+      if (mounted) Navigator.of(context).pop(true);
+    } on Object {
+      if (!mounted) return;
+      setState(() {
+        _saving = false;
+        _error = 'Gagal menyimpan profil. Coba lagi.';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('Ubah profil'),
+    content: Form(
+      key: _formKey,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          TextFormField(
+            controller: _name,
+            decoration: const InputDecoration(labelText: 'Nama lengkap'),
+            validator: Validators.fullName,
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _birthYear,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(labelText: 'Tahun lahir'),
+            validator: Validators.birthYear,
+          ),
+          if (_error != null) ...<Widget>[
             const SizedBox(height: 12),
-            TextField(
-              controller: controller,
-              decoration: const InputDecoration(labelText: 'Ketik HAPUS'),
+            Text(
+              _error!,
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.error,
+              ),
             ),
           ],
-        ),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.of(dialogCtx).pop(),
-            child: const Text('Batal'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
-            onPressed: () async {
-              if (controller.text.trim() != 'HAPUS') return;
-              Navigator.of(dialogCtx).pop();
-              await Services.auth.deleteAccount();
-              await NotificationService.instance.cancelAll();
-              await Services.auth.signOut();
-              if (mounted) {
-                navigator.popUntil((route) => route.isFirst);
-              }
-            },
-            child: const Text('Hapus permanen'),
-          ),
         ],
       ),
-    ).whenComplete(controller.dispose);
+    ),
+    actions: <Widget>[
+      TextButton(
+        onPressed: _saving ? null : () => Navigator.of(context).pop(false),
+        child: const Text('Batal'),
+      ),
+      FilledButton(
+        onPressed: _saving ? null : _save,
+        child: const Text('Simpan'),
+      ),
+    ],
+  );
+}
+
+class _DeleteAccountDialog extends StatefulWidget {
+  const _DeleteAccountDialog();
+
+  @override
+  State<_DeleteAccountDialog> createState() => _DeleteAccountDialogState();
+}
+
+class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
+  final TextEditingController _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('Hapus akun'),
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        const Text(
+          'Ketik "HAPUS" untuk menghapus seluruh akun dan data secara permanen.',
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _controller,
+          decoration: const InputDecoration(labelText: 'Ketik HAPUS'),
+        ),
+      ],
+    ),
+    actions: <Widget>[
+      TextButton(
+        onPressed: () => Navigator.of(context).pop(false),
+        child: const Text('Batal'),
+      ),
+      FilledButton(
+        style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+        onPressed: () {
+          if (_controller.text.trim() != 'HAPUS') return;
+          Navigator.of(context).pop(true);
+        },
+        child: const Text('Hapus permanen'),
+      ),
+    ],
+  );
 }
